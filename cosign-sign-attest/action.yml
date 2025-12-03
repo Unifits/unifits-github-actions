@@ -16,6 +16,7 @@ runs:
       uses: sigstore/cosign-installer@v3.10.0
 
     - name: Cosign Sign (keyless by digest)
+      shell: bash
       env:
         COSIGN_EXPERIMENTAL: "true"
       run: |
@@ -24,6 +25,7 @@ runs:
 
     # Eigene Build-Provenance-Attestation
     - name: Generate Provenance Predicate
+      shell: bash
       run: |
         cat > provenance.json <<'JSON'
         {
@@ -44,6 +46,7 @@ runs:
     - name: Cosign Attest (store in GAR)
       env:
         COSIGN_EXPERIMENTAL: "true"
+      shell: bash
       run: |
         cosign attest --yes \
           --predicate provenance.json  \
@@ -54,10 +57,11 @@ runs:
     - name: Cosign Attest CVE Report (store in GAR)
       env:
         COSIGN_EXPERIMENTAL: "true"
+      shell: bash
       run: |
         cosign attest --yes \
           --predicate "${{ inputs.cve-report }}" \
           --type vuln \
-          ${{ inputs.image }}
-
-
+        
+        
+        
