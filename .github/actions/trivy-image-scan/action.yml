@@ -1,0 +1,57 @@
+name: "Trivy Scan (HTML + JSON)"
+description: "Generate Trivy HTML report and JSON CVE report for container image"
+inputs:
+  image:
+    description: "Image reference with digest (e.g., registry/repo@sha256:...)"
+    required: true
+  html-report:
+    description: "Path for HTML report output"
+    default: "trivy-report.html"
+  json-report:
+    description: "Path for JSON report output"
+    default: "trivy-report.json"
+runs:
+  using: "composite"
+  steps:
+    # Download Trivy HTML template
+    - name: Download Trivy HTML Template
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl --fail -sSL "https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl" -o html.tpl
+        test -s html.tpl && echo "Template downloaded: $(wc -c < html.tpl) bytes"
+
+    # Generate HTML Report using Trivy Action
+    - name: Generate HTML Report using Trivy Action
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        image-ref: ${{ inputs.image }}
+        format: template
+        template: "@html.tpl"
+        output: ${{ inputs.html-report }}
+        ignore-unfixed: false
+        vuln-type: os,library
+        severity: CRITICAL,HIGH
+        scanners: vuln
+
+    # Upload HTML Report as artifact
+    - name: Upload HTML Report
+      uses: actions/upload-artifact@v5
+      with:
+        name: trivy-html-report
+        path: ${{ inputs.html-report }}
+
+    # Generate JSON CVE report for Cosign attestation
+    - name: Trivy JSON report (fail on CRITICAL)
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        image-ref: ${{ inputs.image }}
+        format: cosign-vuln
+        output: ${{ inputs.json-report }}
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL'
+        scanners: 'vuln'
+      env:
+        TRIVY_DISABLE_VEX_NOTICE: 'true'
