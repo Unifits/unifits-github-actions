@@ -61,7 +61,7 @@ runs:
       with:
         path: ${{ inputs.trivy-cache-dir }}
         key: ${{ inputs.fixed-cache-key }}
-        gcs-bucket: ${{ steps.bkt.outputs.bucket }}
+        gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
 
     # Download Trivy HTML template
@@ -130,5 +130,5 @@ runs:
       with:
         path: ${{ inputs.trivy-cache-dir }}
         key: ${{ inputs.fixed-cache-key }}
-        gcs-bucket: ${{ steps.bkt.outputs.bucket }}
+        gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
