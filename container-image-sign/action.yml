@@ -20,8 +20,7 @@ runs:
       env:
         COSIGN_EXPERIMENTAL: "true"
       run: |
-        cosign sign --yes --keyless \
-        ${{ inputs.image }}
+        cosign sign --yes ${{ inputs.image }}
 
     # Eigene Build-Provenance-Attestation
     - name: Generate Provenance Predicate
@@ -62,6 +61,7 @@ runs:
         cosign attest --yes \
           --predicate "${{ inputs.cve-report }}" \
           --type vuln \
+          ${{ inputs.image }}
         
         
         
