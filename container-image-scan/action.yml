@@ -1,16 +1,42 @@
 # Unifits/unifits-github-actions/container-image-scan
+
+# Unifits/unifits-github-actions/container-image-scan
 name: "Container Image Scan"
-description: "Generate Trivy HTML report and JSON CVE report for container image"
+description: "Generate Trivy HTML report and JSON CVE report for container image. Optionally fail the job on findings at or above a chosen severity."
+branding:
+  color: "green"
+  icon: "shield"
+
 inputs:
   image:
     description: "Image reference with digest (e.g., registry/repo@sha256:...)"
     required: true
   html-report:
     description: "Path for HTML report output"
+    required: false
     default: "trivy-report.html"
   json-report:
     description: "Path for JSON report output"
+    required: false
     default: "trivy-report.json"
+  fail-on:
+    description: "Whether the step should fail when vulnerabilities are found at or above the configured severity (true/false)."
+    required: false
+    default: "true"
+  fail-on-severity:
+    description: "Severity threshold at which a failure should be triggered (one of: LOW, MEDIUM, HIGH, CRITICAL)."
+    required: false
+    default: "CRITICAL"
+  ignore-unfixed:
+    description: "Ignore vulnerabilities that are not yet fixed (true/false)."
+    required: false
+    default: "true"
+
+outputs:
+  failed:
+    description: "Boolean flag indicating if vulnerabilities at or above the fail-on-severity were found."
+    value: ${{ steps.result.outputs.failed }}
+
 runs:
   using: "composite"
   steps:
@@ -22,7 +48,7 @@ runs:
         curl --fail -sSL "https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl" -o html.tpl
         test -s html.tpl && echo "Template downloaded: $(wc -c < html.tpl) bytes"
 
-    # Generate HTML Report using Trivy Action
+    # Generate HTML Report using Trivy Action (human-readable)
     - name: Generate HTML Report using Trivy Action
       uses: aquasecurity/trivy-action@0.33.1
       with:
@@ -42,17 +68,32 @@ runs:
         name: trivy-html-report
         path: ${{ inputs.html-report }}
 
-    # Generate JSON CVE report for Cosign attestation
-    - name: Trivy JSON report (fail on CRITICAL)
+    # JSON CVE report (machine-readable). Exit code derived from fail-on.
+    - name: Trivy JSON report
+      id: trivy-json
       uses: aquasecurity/trivy-action@0.33.1
       with:
         image-ref: ${{ inputs.image }}
         format: cosign-vuln
         output: ${{ inputs.json-report }}
-        exit-code: '1'
-        ignore-unfixed: true
+        # If fail-on == 'true' => exit-code '1' (break the build on findings),
+        # else exit-code '0' (always continue).
+        exit-code: ${{ inputs.fail-on == 'true' && '1' || '0' }}
+        ignore-unfixed: ${{ inputs.ignore-unfixed }}
         vuln-type: 'os,library'
-        severity: 'CRITICAL'
+        severity: ${{ inputs.fail-on-severity }}
         scanners: 'vuln'
       env:
         TRIVY_DISABLE_VEX_NOTICE: 'true'
+
+    # Compute a 'failed' boolean output by checking if the scan step failed
+    - name: Export result
+      id: result
+      shell: bash
+      run: |
+        # steps.trivy-json.outcome is 'success' or 'failure'
+        OUTCOME="${{ steps.trivy-json.outcome }}"
+        if [ "$OUTCOME" = "failure" ]; then
+          echo "failed=true" >> "$GITHUB_OUTPUT"
+        else
+        echo "failed=false" >> "$GITHUB_OUTPUT"
