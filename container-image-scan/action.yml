@@ -62,6 +62,20 @@ runs:
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
 
+
+    # Workaround - steps.restore-cache.outputs.cache-hit == 'false' funktioniert nicht
+    - name: Mark restore as hit/miss
+      id: restore-mark
+      shell: bash
+      run: |
+        set -euo pipefail
+        CACHE="${{ github.workspace }}/.cache/trivy"
+        if [ -f "$CACHE/db/trivy.db" ] && [ -f "$CACHE/java-db/trivy-java.db" ]; then
+          echo "hit=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "hit=false" >> "$GITHUB_OUTPUT"
+        fi      
+
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
       shell: bash
@@ -124,7 +138,7 @@ runs:
         fi
 
     - name: Save Trivy cache to GCS (only on cache miss)
-      if: steps.restore-cache.outputs.cache-hit != 'true'
+      if: steps.restore-mark.outputs.hit == 'false'
       uses: danySam/gcs-cache/save@v1
       with:
         path: '${{ github.workspace }}/.cache/trivy'
