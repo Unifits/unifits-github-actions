@@ -1,6 +1,4 @@
 # Unifits/unifits-github-actions/container-image-scan
-
-# Unifits/unifits-github-actions/container-image-scan
 name: "Container Image Scan"
 description: "Generate Trivy HTML report and JSON CVE report for container image. Optionally fail the job on findings at or above a chosen severity."
 branding:
@@ -96,4 +94,5 @@ runs:
         if [ "$OUTCOME" = "failure" ]; then
           echo "failed=true" >> "$GITHUB_OUTPUT"
         else
-        echo "failed=false" >> "$GITHUB_OUTPUT"
+          echo "failed=false" >> "$GITHUB_OUTPUT"
+        fi
