@@ -30,6 +30,22 @@ inputs:
     required: false
     default: "true"
 
+  # --- GCS Restore-only (fixer Key) ---
+  gcs-bucket:
+    description: "GCS Bucket für Trivy Cache"
+    required: true
+  gcs-path-prefix:
+    description: "Prefix im Bucket (z. B. trivy-cache/)"
+    required: false
+    default: "trivy-cache/"
+  trivy-cache-dir:
+    description: "Lokaler Trivy Cache"
+    required: false
+    default: "~/.cache/trivy"
+  fixed-cache-key:
+    description: "Fixer Restore-Key, z. B. trivy-db-current oder trivy-db-YYYY-MM-DD"
+    required: true
+
 outputs:
   failed:
     description: "Boolean flag indicating if vulnerabilities at or above the fail-on-severity were found."
@@ -38,6 +54,16 @@ outputs:
 runs:
   using: "composite"
   steps:
+
+    # Restore ONLY: fixer Key
+    - name: Restore Trivy cache (fixed key)
+      uses: danySam/gcs-cache/restore@v1
+      with:
+        path: ${{ inputs.trivy-cache-dir }}
+        key: ${{ inputs.fixed-cache-key }}
+        gcs-bucket: ${{ steps.bkt.outputs.bucket }}
+        gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
+
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
       shell: bash
@@ -50,6 +76,7 @@ runs:
     - name: Generate HTML Report using Trivy Action
       uses: aquasecurity/trivy-action@0.33.1
       with:
+        cache: 'false'
         image-ref: ${{ inputs.image }}
         format: template
         template: "@html.tpl"
@@ -71,6 +98,7 @@ runs:
       id: trivy-json
       uses: aquasecurity/trivy-action@0.33.1
       with:
+        cache: 'false'
         image-ref: ${{ inputs.image }}
         format: cosign-vuln
         output: ${{ inputs.json-report }}
@@ -96,3 +124,11 @@ runs:
         else
           echo "failed=false" >> "$GITHUB_OUTPUT"
         fi
+
+    - name: Save Maven cache to GCS (releases only)
+      uses: danySam/gcs-cache/save@v1
+      with:
+        path: ${{ inputs.trivy-cache-dir }}
+        key: ${{ inputs.fixed-cache-key }}
+        gcs-bucket: ${{ steps.bkt.outputs.bucket }}
+        gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
