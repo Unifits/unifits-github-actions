@@ -124,7 +124,7 @@ runs:
         fi
 
     - name: Save Trivy cache to GCS (only on cache miss)
-      if: steps.restore-cache.outputs.cache-hit != 'true'
+      if: steps.restore-cache.outputs.cache-hit == 'false'
       uses: danySam/gcs-cache/save@v1
       with:
         path: '${{ github.workspace }}/.cache/trivy'
