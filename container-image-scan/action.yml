@@ -51,16 +51,12 @@ runs:
   using: "composite"
   steps:
 
-    # Einheitlichen Cache-Pfad setzen (HOME expandiert zuverlässig)
-    - name: Set TRIVY cache dir
-      shell: bash
-      run: echo "TRIVY_CACHE_DIR=$HOME/.cache/trivy" >> "$GITHUB_ENV"
 
     # Restore ONLY: fixer Key
     - name: Restore Trivy cache (fixed key)
       uses: danySam/gcs-cache/restore@v1
       with:
-        path: ${{ env.TRIVY_CACHE_DIR }}
+        path: '${{ github.workspace }}/.cache/trivy'
         key: ${{ inputs.fixed-cache-key }}
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
@@ -129,7 +125,7 @@ runs:
     - name: Save Maven cache to GCS (releases only)
       uses: danySam/gcs-cache/save@v1
       with:
-        path: ${{ env.TRIVY_CACHE_DIR }}
+        path: '${{ github.workspace }}/.cache/trivy'
         key: ${{ inputs.fixed-cache-key }}
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
