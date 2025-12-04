@@ -35,9 +35,9 @@ inputs:
     description: "GCS Bucket für Trivy Cache"
     required: true
   gcs-path-prefix:
-    description: "Prefix im Bucket (z. B. trivy-cache/)"
+    description: "Prefix im Bucket (z. B. trivy-cache)"
     required: false
-    default: "trivy-cache/"
+    default: "trivy-cache"
   trivy-cache-dir:
     description: "Lokaler Trivy Cache"
     required: false
