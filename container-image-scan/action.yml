@@ -38,10 +38,6 @@ inputs:
     description: "Prefix im Bucket (z. B. trivy-cache)"
     required: false
     default: "trivy-cache"
-  trivy-cache-dir:
-    description: "Lokaler Trivy Cache"
-    required: false
-    default: "~/.cache/trivy"
   fixed-cache-key:
     description: "Fixer Restore-Key, z. B. trivy-db-current oder trivy-db-YYYY-MM-DD"
     required: true
@@ -55,11 +51,16 @@ runs:
   using: "composite"
   steps:
 
+    # Einheitlichen Cache-Pfad setzen (HOME expandiert zuverlässig)
+    - name: Set TRIVY cache dir
+      shell: bash
+      run: echo "TRIVY_CACHE_DIR=$HOME/.cache/trivy" >> "$GITHUB_ENV"
+
     # Restore ONLY: fixer Key
     - name: Restore Trivy cache (fixed key)
       uses: danySam/gcs-cache/restore@v1
       with:
-        path: ${{ inputs.trivy-cache-dir }}
+        path: ${{ env.TRIVY_CACHE_DIR }}
         key: ${{ inputs.fixed-cache-key }}
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
@@ -128,7 +129,7 @@ runs:
     - name: Save Maven cache to GCS (releases only)
       uses: danySam/gcs-cache/save@v1
       with:
-        path: ${{ inputs.trivy-cache-dir }}
+        path: ${{ env.TRIVY_CACHE_DIR }}
         key: ${{ inputs.fixed-cache-key }}
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
