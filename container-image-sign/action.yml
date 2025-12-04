@@ -61,6 +61,7 @@ runs:
         cosign attest --yes \
           --predicate "${{ inputs.cve-report }}" \
           --type vuln \
+          ${{ inputs.image }}
         
         
         
