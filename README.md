@@ -1,76 +1,45 @@
-# Unifits GitHub Actions Repository
 
-## Overview
-This repository provides reusable **Composite GitHub Actions** to standardize security and compliance workflows across all Unifits projects.
+# UNIFITS GitHub Actions
 
-Our goal is to simplify the integration of container image security scanning, signing, and attestation into CI/CD pipelines.
-
----
-
-## Available Actions
-
-### 1. **Cosign Sign & Attest**
-- **Purpose:** Sign container images using Cosign (keyless via GitHub OIDC) and create attestations:
-  - Provenance (SLSA-compliant build metadata)
-  - CVE Report (based on vulnerability scan)
-- **Path:** `.github/actions/cosign-sign-attest`
-- **Key Features:**
-  - Keyless signing (no secrets required)
-  - Generates provenance.json automatically
-  - Attests CVE report for supply chain security
-
-### 2. **Trivy Image Scan**
-- **Purpose:** Scan container images for vulnerabilities using Trivy and generate:
-  - HTML report (human-readable)
-  - JSON report (cosign-vuln format for attestation)
-- **Path:** `.github/actions/trivy-image-scan`
-- **Key Features:**
-  - Downloads official Trivy HTML template
-  - Uploads HTML report as artifact
-  - Fails workflow on CRITICAL vulnerabilities
+Welcome to the UNIFITS GitHub Actions repository!  
+This repository provides a collection of reusable, composable GitHub Actions for secure, efficient, and automated CI/CD workflows—tailored for Java, container, and cloud-native projects.
 
 ---
 
-## Quick Start
+## 🚀 What’s Inside?
 
-### Using Cosign Sign & Attest
+- **Container Security:**  
+  Actions for scanning container images with Trivy and signing/attesting images with Cosign.
+
+- **Java Build Automation:**  
+  Composite actions for building and pushing container images using Maven and Jib.
+
+- **Caching:**  
+  Actions to restore and save Maven dependencies to Google Cloud Storage, speeding up builds and reducing network usage.
+
+- **Best Practices:**  
+  All actions are designed for security, reproducibility, and easy integration into modern CI/CD pipelines.
+
+---
+
+## 📦 Action Directory
+
+Each action is located in its own subdirectory under `.github/actions/` and includes:
+
+- `action.yml` — Action definition and schema.
+- `README.md` — Documentation and usage examples.
+- Supporting scripts or templates as needed.
+
+---
+
+## 📝 Usage Example
+
+To use an action from this repository in your workflow:
+
 ```yaml
-- name: Cosign Sign & Attest
-  uses: unifits-github-actions/cosign-sign-attest@v1
+- name: Example: Maven Jib Build & Push
+  uses: ./.github/actions/maven-jib-build
   with:
-    image: my-registry/my-image@sha256:digest
-    cve-report: trivy-report.json
-```
-
-### Using Trivy Image Scan
-```yaml
-- name: Trivy Image Scan (HTML + JSON)
-  uses: unifits-github-actions/trivy-image-scan@v1
-  with:
-    image: my-registry/my-image@sha256:digest
-    html-report: trivy-report.html
-    json-report: trivy-report.json
-```
-
----
-
-## Versioning
-- Actions are versioned using Git tags and GitHub Releases.
-- Use floating tags like `@v1` for stable major versions.
-- Example:
-  ```bash
-  git tag v1.0.0
-  git tag v1
-  git push origin v1.0.0 v1
-  ```
-
----
-
-## Requirements
-- GitHub workflow must include:
-  ```yaml
-  permissions:
-    id-token: write
-  ```
-- Internet access for downloading Trivy template.
-- Image must be pushed to a registry before scanning/signing.
+    maven-profile: dockerize
+    digest-output-file: digest.txt
+    maven

@@ -1,5 +1,5 @@
-
-name: "Cosign Sign & Attest"
+# Unifits/unifits-github-actions/container-image-sign
+name: "Container Image Sign"
 description: "Sign an image and create attestations (Provenance + CVE Report)"
 inputs:
   image:

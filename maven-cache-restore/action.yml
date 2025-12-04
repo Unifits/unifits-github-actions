@@ -1,0 +1,44 @@
+# Unifits/unifits-github-actions/maven-cache-restore
+name: "Maven cache restore (GCS)"
+description: "Restores the Maven local repository cache from Google Cloud Storage."
+branding:
+  color: "green"
+  icon: "download"
+
+inputs:
+  cache-key:
+    description: "Primary cache key for the Maven repository (e.g., maven-<os>-<repo>-<hash>)."
+    required: false
+    default: "maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}"
+  gcs-bucket:
+    description: "Name of the GCS bucket that stores the cache."
+    required: true
+  gcs-path-prefix:
+    description: "Path prefix within the bucket (e.g., maven/<repo>/releases)."
+    required: false
+    default: "maven/${{ github.repository }}/releases"
+  path:
+    description: "Local path to the Maven repository."
+    required: false
+    default: "~/.m2/repository"
+
+outputs:
+  cache-primary-key:
+    description: "The primary key used for the restored cache; forward to save step."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Restore Maven cache from GCS
+      id: restore
+      uses: danySam/gcs-cache/restore@v1
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.cache-key }}
+        gcs-bucket: ${{ inputs.gcs-bucket }}
+        gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
+
+    - name: Export cache key
+      shell: bash
+      run: |
+        echo "cache-primary-key=${{ steps.restore.outputs.cache-primary-key }}" >> "$GITHUB_OUTPUT"

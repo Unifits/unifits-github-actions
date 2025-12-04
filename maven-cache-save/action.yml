@@ -1,0 +1,44 @@
+# Unifits/unifits-github-actions/maven-cache-save
+name: "Maven cache save (GCS)"
+description: "Prunes SNAPSHOT artifacts from the local Maven repository and saves the cache to Google Cloud Storage."
+branding:
+  color: "orange"
+  icon: "upload"
+
+inputs:
+  cache-key:
+    description: "Cache key matching the restore step to ensure consistency."
+    required: false
+    default: "maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}"
+  gcs-bucket:
+    description: "Name of the GCS bucket to store the cache."
+    required: true
+  gcs-path-prefix:
+    description: "Path prefix within the bucket where the cache will be saved."
+    required: false
+    default: "maven/${{ github.repository }}/releases"
+  path:
+    description: "Local path to the Maven repository to save."
+    required: false
+    default: "~/.m2/repository"
+  prune-pattern:
+    description: "Pattern used to exclude jars"
+    required: false
+    default: "*-SNAPSHOT*"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Prune SNAPSHOTs from local Maven repo
+      shell: bash
+      run: |
+        set -euo pipefail
+        find "${{ inputs.path }}" -type d -name "${{ inputs.prune-pattern }}" -exec rm -rf {} +
+
+    - name: Save Maven cache to GCS (releases only)
+      uses: danySam/gcs-cache/save@v1
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.cache-key }}
+        gcs-bucket: ${{ inputs.gcs-bucket }}
+        gcs-path-prefix: ${{ inputs.gcs-path-prefix }}

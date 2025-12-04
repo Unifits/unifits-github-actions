@@ -1,4 +1,5 @@
-name: "Trivy Scan (HTML + JSON)"
+# Unifits/unifits-github-actions/container-image-scan
+name: "Container Image Scan"
 description: "Generate Trivy HTML report and JSON CVE report for container image"
 inputs:
   image:
