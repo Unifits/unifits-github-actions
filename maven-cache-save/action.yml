@@ -29,11 +29,21 @@ inputs:
 runs:
   using: "composite"
   steps:
+
     - name: Prune SNAPSHOTs from local Maven repo
       shell: bash
       run: |
         set -euo pipefail
-        find "${{ inputs.path }}" -type d -name "${{ inputs.prune-pattern }}" -exec rm -rf {} +
+        # Expand "~" to $HOME if present in the provided path
+        REPO_PATH="${{ inputs.path }}"
+        REPO_PATH="${REPO_PATH/#~/$HOME}"
+        
+        if [ ! -d "$REPO_PATH" ]; then
+          echo "ERROR: Maven repo path '$REPO_PATH' does not exist."
+          exit 1
+        fi
+        
+        find "$REPO_PATH" -type d -name "${{ inputs.prune-pattern }}" -exec rm -rf {} +
 
     - name: Save Maven cache to GCS (releases only)
       uses: danySam/gcs-cache/save@v1
