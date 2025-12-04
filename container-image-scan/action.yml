@@ -54,6 +54,7 @@ runs:
 
     # Restore ONLY: fixer Key
     - name: Restore Trivy cache (fixed key)
+      id: restore-cache
       uses: danySam/gcs-cache/restore@v1
       with:
         path: '${{ github.workspace }}/.cache/trivy'
@@ -122,7 +123,8 @@ runs:
           echo "failed=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Save Maven cache to GCS (releases only)
+    - name: Save Trivy cache to GCS (only on cache miss)
+      if: steps.restore-cache.outputs.cache-hit != 'true'
       uses: danySam/gcs-cache/save@v1
       with:
         path: '${{ github.workspace }}/.cache/trivy'
