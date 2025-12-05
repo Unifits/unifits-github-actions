@@ -107,6 +107,11 @@ runs:
           echo "hit=false" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Manual Trivy Setup
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        cache: false
+
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
       if: ${{ inputs.html-enable == 'true' }}
@@ -122,6 +127,7 @@ runs:
       uses: aquasecurity/trivy-action@0.33.1
       with:
         cache: 'false'
+        skip-setup-trivy: 'true'
         image-ref: ${{ inputs.image }}
         format: template
         template: "@html.tpl"
@@ -145,6 +151,7 @@ runs:
       if: ${{ inputs.vuln-enable == 'true' }}
       uses: aquasecurity/trivy-action@0.33.1
       with:
+        skip-setup-trivy: 'true'
         cache: 'false'
         image-ref: ${{ inputs.image }}
         format: ${{ inputs.vuln-format }}
@@ -183,6 +190,7 @@ runs:
       if: ${{ inputs.sbom-enable == 'true' }}
       uses: aquasecurity/trivy-action@0.33.1
       with:
+        skip-setup-trivy: 'true'
         cache: 'false'
         image-ref: ${{ inputs.image }}
         # Map Input -> Trivy:
