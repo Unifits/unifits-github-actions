@@ -62,12 +62,6 @@ inputs:
     required: false
     default: ""
 
-  # ---- Advanced: SLSA provenance using SBOM as predicate (optional) ----
-  attest-as-provenance:
-    description: "If 'true', emit DSSE provenance attestation using the SBOM as predicate."
-    required: false
-    default: "false"
-
 outputs:
   signed-ref:
     description: "Signed image reference (repo@digest)."
@@ -162,7 +156,10 @@ runs:
         MT_OVERRIDE="${{ inputs.sbom-media-type }}"
 
         [[ ! -f "$SBOM" ]] && { echo "SBOM file not found: $SBOM"; exit 1; }
-        case "$FMT" in cyclonedx|spdx) ;; *) echo "Unsupported sbom-format: $FMT"; exit 1;; esac
+        case "$FMT" in
+          cyclonedx|spdx) ;;
+          *) echo "Unsupported sbom-format: $FMT"; exit 1 ;;
+        esac
 
         # Inference for media types
         if [[ -z "$MT_OVERRIDE" ]]; then
@@ -173,11 +170,21 @@ runs:
             MT_XML="application/spdx+xml"
             MT_JSON="application/spdx+json"
           fi
-          case "$SBOM" in *.xml) MT="$MT_XML" ;; *.json) MT="$MT_JSON" ;; *) MT="$MT_JSON" ;; esac
+          case "$SBOM" in
+            *.xml) MT="$MT_XML" ;;
+            *.json) MT="$MT_JSON" ;;
+            *) MT="$MT_JSON" ;;
+          esac
         else
           MT="$MT_OVERRIDE"
         fi
 
+        # Map format -> standardskonformer Predicate-URI
+        case "$FMT" in
+          cyclonedx) TYPE_URI="http://cyclonedx.org/bom" ;;
+          spdx)      TYPE_URI="https://spdx.dev/Document" ;;
+        esac
+
         AFLAGS=()
         if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
           AFLAGS+=( "--tlog-upload=false" )
@@ -186,24 +193,11 @@ runs:
           AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
 
-        echo "Attesting SBOM (format: $FMT, media-type: $MT) to $IMG"
-        cosign attest --yes --type "$FMT" --predicate "$SBOM" --predicate-media-type "$MT" "${AFLAGS[@]}" "$IMG"
-        echo "attested=true" >> "$GITHUB_OUTPUT"
-
-    # ---------- Optional DSSE provenance using SBOM as predicate ----------
-    - name: DSSE provenance attestation (advanced, optional)
-      if: ${{ inputs.sbom-path != '' && inputs.attest-as-provenance == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        IMG="${{ inputs.image }}"
-        SBOM="${{ inputs.sbom-path }}"
-        AFLAGS=()
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-          AFLAGS+=( "--tlog-upload=false" )
-        fi
-        if [[ -n "${{ inputs.rekor-url }}" ]]; then
-          AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
-        fi
-        echo "Emitting DSSE provenance attestation to $IMG"
-        cosign attest --yes --type "https://slsa.dev/provenance/v1" --predicate "$SBOM" "${AFLAGS[@]}" "$IMG"
+        echo "Attesting SBOM (type: $TYPE_URI, media-type: $MT) to $IMG"
+        cosindev="cosign attest --yes --type '$TYPE_URI' --predicate '$SBOM' --predicate-media-type '$MT' ${AFLAGS[*]} '$IMG'"
+        echo "$cosindev"
+        cosign attest --yes \
+          --type "$TYPE_URI" \
+          --predicate "$SBOM" \
+          --predicate-media-type "$MT" \
+                   "${AFLAGS[@]}" "$IMG"
