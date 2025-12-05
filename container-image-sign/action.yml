@@ -80,7 +80,8 @@ runs:
       uses: sigstore/cosign-installer@v3
       with:
         #Default 'v2.5.2' @v3
-        cosign-release: 'v3.0.2'
+        cosign-release: 'v2.6.1'
+
 
     - name: Cosign sign (keyless OIDC)
       id: cosign-sign
