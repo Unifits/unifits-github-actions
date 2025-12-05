@@ -78,6 +78,9 @@ runs:
   steps:
     - name: Install Cosign
       uses: sigstore/cosign-installer@v3
+      with:
+        #Default 'v2.5.2' @v3
+        cosign-release: 'v3.0.2'
 
     - name: Cosign sign (keyless OIDC)
       id: cosign-sign
