@@ -1,3 +1,4 @@
+# Maven Cache Restore (GCS) GitHub Action
 
 # Maven Cache Restore (GCS)
 
@@ -5,17 +6,21 @@
 Restores the Maven local repository cache from Google Cloud Storage to speed up builds and reduce dependency download time.  
 This composite GitHub Action retrieves a Maven cache from a Google Cloud Storage (GCS) bucket and restores it to the local Maven repository directory (`~/.m2/repository` by default).
 
----
+- **Restore Maven Cache**: Downloads the Maven `.m2/repository` cache from a specified GCS bucket.
+- **Customizable Keys and Paths**: Supports custom cache keys, GCS bucket paths, and local repository locations.
+- **Optimized for CI/CD**: Ideal for workflows running on GitHub Actions with Google Cloud integration.
 
-## 🚀 Features
+## Inputs
 
 - Restores Maven dependencies from a remote GCS bucket.
 - Supports custom cache keys and path prefixes for flexible caching strategies.
 - Speeds up Maven builds by avoiding repeated downloads of dependencies.
 
----
+## Outputs
 
-## 📥 Inputs
+| Name                | Description                                      |
+|---------------------|--------------------------------------------------|
+| `cache-primary-key` | The primary key used for the restored cache      |
 
 | Name            | Description                                                                                     | Required | Default                                                                                                   |
 |-----------------|-------------------------------------------------------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------|

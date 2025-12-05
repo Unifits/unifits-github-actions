@@ -1,3 +1,4 @@
+# Maven Cache Save (GCS) GitHub Action
 
 # Maven Cache Save (GCS)
 
@@ -5,9 +6,12 @@
 Prunes SNAPSHOT artifacts from the local Maven repository and saves the cache to Google Cloud Storage.  
 This composite GitHub Action helps optimize Maven builds by removing unnecessary SNAPSHOT dependencies and uploading the cleaned repository to a remote GCS bucket for future reuse.
 
----
+- **Prune SNAPSHOT Artifacts**: Removes SNAPSHOT dependencies from the local Maven repository before caching.
+- **Save to GCS**: Uploads the pruned Maven repository to a specified GCS bucket.
+- **Customizable Patterns and Paths**: Supports custom prune patterns, cache keys, GCS bucket paths, and local repository locations.
+- **Optimized for CI/CD**: Ideal for workflows running on GitHub Actions with Google Cloud integration.
 
-## 🚀 Features
+## Inputs
 
 - Deletes all SNAPSHOT artifacts from the local Maven repository.
 - Saves the cleaned Maven cache to a specified GCS bucket and path prefix.
