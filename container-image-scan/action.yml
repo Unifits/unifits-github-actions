@@ -107,10 +107,10 @@ runs:
           echo "hit=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Manual Trivy Setup
-      uses: aquasecurity/trivy-action@0.33.1
+    - name: Install Trivy
+      uses: aquasecurity/setup-trivy@v0.2.3
       with:
-        cache: false
+        version: v0.68.1
 
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
