@@ -1,45 +1,40 @@
+# Unifits GitHub Actions
 
-# UNIFITS GitHub Actions
+A collection of professional GitHub Actions for secure, efficient, and cloud-native CI/CD workflows. These actions are designed to support modern development pipelines, especially for teams using Google Cloud, Maven, and containerized deployments.
 
-Welcome to the UNIFITS GitHub Actions repository!  
-This repository provides a collection of reusable, composable GitHub Actions for secure, efficient, and automated CI/CD workflows—tailored for Java, container, and cloud-native projects.
+## Available Actions
 
----
+- **Container Image Scan**  
+  Scan container images for vulnerabilities using Trivy, generate reports, and create SBOMs.  
+  → [./container-image-scan/README.md](./container-image-scan/README.md)
 
-## 🚀 What’s Inside?
+- **Container Image Sign**  
+  Sign container images with Cosign (keyless OIDC) and optionally attest SBOMs and CVE reports.  
+  → [./container-image-sign/README.md](./container-image-sign/README.md)
 
-- **Container Security:**  
-  Actions for scanning container images with Trivy and signing/attesting images with Cosign.
+- **Maven Cache Restore (GCS)**  
+  Restore the Maven local repository cache from Google Cloud Storage to speed up builds.  
+  → [./maven-cache-restore/README.md](./maven-cache-restore/README.md)
 
-- **Java Build Automation:**  
-  Composite actions for building and pushing container images using Maven and Jib.
+- **Maven Cache Save (GCS)**  
+  Prune SNAPSHOT artifacts and save the Maven repository cache to Google Cloud Storage.  
+  → [./maven-cache-save/README.md](./maven-cache-save/README.md)
 
-- **Caching:**  
-  Actions to restore and save Maven dependencies to Google Cloud Storage, speeding up builds and reducing network usage.
+- **Maven Jib Build & Push**  
+  Build and push container images using Maven and Jib, emitting the image digest for downstream steps.  
+  → [./maven-jib-build/README.md](./maven-jib-build/README.md)
 
-- **Best Practices:**  
-  All actions are designed for security, reproducibility, and easy integration into modern CI/CD pipelines.
+## Usage
 
----
+Each action is self-contained and documented in its respective directory. See the individual README.md files for setup, configuration, and example workflows.
 
-## 📦 Action Directory
+## Requirements
 
-Each action is located in its own subdirectory under `.github/actions/` and includes:
+- GitHub Actions runner (Linux recommended)
+- Google Cloud credentials (for GCS and GAR actions)
+- Maven (for Java build actions)
+- Docker or Jib (for container build actions)
 
-- `action.yml` — Action definition and schema.
-- `README.md` — Documentation and usage examples.
-- Supporting scripts or templates as needed.
+## License
 
----
-
-## 📝 Usage Example
-
-To use an action from this repository in your workflow:
-
-```yaml
-- name: Example: Maven Jib Build & Push
-  uses: ./.github/actions/maven-jib-build
-  with:
-    maven-profile: dockerize
-    digest-output-file: digest.txt
-    maven
+This repository is licensed under the MIT License.
