@@ -83,6 +83,7 @@ runs:
         cosign-release: 'v2.6.1'
 
 
+
     - name: Cosign sign (keyless OIDC)
       id: cosign-sign
       shell: bash
@@ -91,61 +92,67 @@ runs:
         IMG="${{ inputs.image }}"
         [[ -z "$IMG" ]] && { echo "Input 'image' must not be empty"; exit 1; }
 
-        # Build common flags
+      # Build common flags
         FLAGS=()
-        # Rekor / transparency
+      # Rekor / transparency
         if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
           FLAGS+=( "--tlog-upload=false" )
         fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
           FLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
-        # Helpful annotations for audit/policy
-        FLAGS+=( "--annotation=repo=${GITHUB_REPOSITORY}" )
-        FLAGS+=( "--annotation=ref=${GITHUB_REF}" )
-        FLAGS+=( "--annotation=sha=${GITHUB_SHA}" )
-        FLAGS+=( "--annotation=workflow=${GITHUB_WORKFLOW}" )
-        FLAGS+=( "--annotation=run-id=${GITHUB_RUN_ID}" )
-        # User-provided extra annotations (newline-separated key=value)
+        
+      # ---- Annotations: ROBUST (Kurzform -a "key=value") ----
+        FLAGS+=( -a "repo=${GITHUB_REPOSITORY}" )
+        FLAGS+=( -a "ref=${GITHUB_REF}" )
+        FLAGS+=( -a "sha=${GITHUB_SHA}" )
+        FLAGS+=( -a "workflow=${GITHUB_WORKFLOW}" )
+        FLAGS+=( -a "run-id=${GITHUB_RUN_ID}" )
+      
+      # User-provided extra annotations (newline-separated key=value)
         if [[ -n "${{ inputs.extra-annotations }}" ]]; then
           while IFS= read -r line; do
             [[ -z "$line" ]] && continue
-            FLAGS+=( "--annotation=${line}" )
+            FLAGS+=( -a "$line" )
           done <<< "${{ inputs.extra-annotations }}"
         fi
 
         echo "Signing image: $IMG"
         if [[ "${{ inputs.recursive-sign }}" == "true" ]]; then
+          echo "cosign sign --yes --recursive ${FLAGS[*]} '$IMG'"
           cosign sign --yes --recursive "${FLAGS[@]}" "$IMG"
         else
+          echo "cosindev sign --yes ${FLAGS[*]} '$IMG'"
           cosign sign --yes "${FLAGS[@]}" "$IMG"
         fi
+        
         echo "signed_ref=$IMG" >> "$GITHUB_OUTPUT"
 
-    # ---------- CVE report attestation ----------
-    - name: Cosign attest CVE report (optional)
-      id: cve-attest
-      if: ${{ inputs.cve-report != '' && inputs.attest-cve-report == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        IMG="${{ inputs.image }}"
-        CVE="${{ inputs.cve-report }}"
-        MT="${{ inputs.cve-media-type }}"
-        [[ ! -f "$CVE" ]] && { echo "CVE report file not found: $CVE"; exit 1; }
 
-        AFLAGS=()
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-          AFLAGS+=( "--tlog-upload=false" )
-        fi
-        if [[ -n "${{ inputs.rekor-url }}" ]]; then
-          AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
-        fi
-
-        # Use 'vuln' type (Trivy-compatible)
-        echo "Attesting CVE report ($CVE, media-type: $MT) to $IMG"
-        cosign attest --yes --type "vuln" --predicate "$CVE" --predicate-media-type "$MT" "${AFLAGS[@]}" "$IMG"
-        echo "attested=true" >> "$GITHUB_OUTPUT"
+      # ---------- CVE report attestation ----------
+      - name: Cosign attest CVE report (optional)
+        id: cve-attest
+        if: ${{ inputs.cve-report != '' && inputs.attest-cve-report == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMG="${{ inputs.image }}"
+          CVE="${{ inputs.cve-report }}"
+          MT="${{ inputs.cve-media-type }}"
+          [[ ! -f "$CVE" ]] && { echo "CVE report file not found: $CVE"; exit 1; }
+  
+          AFLAGS=()
+          if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
+            AFLAGS+=( "--tlog-upload=false" )
+          fi
+          if [[ -n "${{ inputs.rekor-url }}" ]]; then
+            AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
+          fi
+  
+          # Use 'vuln' type (Trivy-compatible)
+          echo "Attesting CVE report ($CVE, media-type: $MT) to $IMG"
+          cosign attest --yes --type "vuln" --predicate "$CVE" --predicate-media-type "$MT" "${AFLAGS[@]}" "$IMG"
+          echo "attested=true" >> "$GITHUB_OUTPUT"
 
     # ---------- SBOM attestation ----------
     - name: Cosign attest SBOM (optional)
