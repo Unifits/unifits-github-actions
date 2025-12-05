@@ -1,6 +1,7 @@
+
 # Unifits/unifits-github-actions/container-image-scan
 name: "Container Image Scan"
-description: "Generate Trivy HTML report and JSON CVE report for container image. Optionally fail the job on findings at or above a chosen severity."
+description: "Generate Trivy HTML report and JSON CVE report for container image. Optionally fail the job on findings and generate an SBOM for attestation."
 branding:
   color: "green"
   icon: "shield"
@@ -9,26 +10,42 @@ inputs:
   image:
     description: "Image reference with digest (e.g., registry/repo@sha256:...)"
     required: true
+
+  # ---- Reports (Vuln) ----
   html-report:
     description: "Path for HTML report output"
     required: false
     default: "trivy-report.html"
   json-report:
-    description: "Path for JSON report output"
+    description: "Path for JSON report output (cosign-vuln format)"
     required: false
     default: "trivy-report.json"
   fail-on:
-    description: "Whether the step should fail when vulnerabilities are found at or above the configured severity (true/false)."
+    description: "Fail when vulnerabilities are found at/above 'fail-on-severity' (true/false)"
     required: false
     default: "true"
   fail-on-severity:
-    description: "Severity threshold at which a failure should be triggered (one of: LOW, MEDIUM, HIGH, CRITICAL)."
+    description: "Severity threshold (one of: LOW, MEDIUM, HIGH, CRITICAL)"
     required: false
     default: "CRITICAL"
   ignore-unfixed:
-    description: "Ignore vulnerabilities that are not yet fixed (true/false)."
+    description: "Ignore vulnerabilities that are not yet fixed (true/false)"
     required: false
     default: "true"
+
+  # ---- SBOM (optional) ----
+  sbom-enable:
+    description: "If 'true', generate an SBOM for the image"
+    required: false
+    default: "true"
+  sbom-format:
+    description: "SBOM output format for Trivy (one of: cyclonedx-json, spdx-json)"
+    required: false
+    default: "cyclonedx-json"
+  sbom-output:
+    description: "SBOM output path (e.g., sbom.cdx.json or sbom.spdx.json)"
+    required: false
+    default: "sbom.cdx.json"
 
   # --- GCS Restore-only (fixer Key) ---
   gcs-bucket:
@@ -44,13 +61,18 @@ inputs:
 
 outputs:
   failed:
-    description: "Boolean flag indicating if vulnerabilities at or above the fail-on-severity were found."
+    description: "Boolean flag indicating if vulnerabilities at/above fail-on-severity were found."
     value: ${{ steps.result.outputs.failed }}
+  sbom-path:
+    description: "Path of the generated SBOM (if sbom-enable == true)"
+    value: ${{ steps.sbom-meta.outputs.path }}
+  sbom-format:
+    description: "SBOM format normalized for signing action (cyclonedx|spdx)"
+    value: ${{ steps.sbom-meta.outputs.format }}
 
 runs:
   using: "composite"
   steps:
-
 
     # Restore ONLY: fixer Key
     - name: Restore Trivy cache (fixed key)
@@ -61,7 +83,6 @@ runs:
         key: ${{ inputs.fixed-cache-key }}
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
-
 
     # Workaround - steps.restore-cache.outputs.cache-hit == 'false' funktioniert nicht
     - name: Mark restore as hit/miss
@@ -74,7 +95,7 @@ runs:
           echo "hit=true" >> "$GITHUB_OUTPUT"
         else
           echo "hit=false" >> "$GITHUB_OUTPUT"
-        fi      
+        fi
 
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
@@ -123,6 +144,38 @@ runs:
         scanners: 'vuln'
       env:
         TRIVY_DISABLE_VEX_NOTICE: 'true'
+
+    # Optional: SBOM generation (1) – erzeugen
+    - name: Generate SBOM (optional)
+      if: ${{ inputs.sbom-enable == 'true' }}
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        cache: 'false'
+        image-ref: ${{ inputs.image }}
+        # Map Input -> Trivy:
+        #   cyclonedx-json -> cyclonedx
+        #   spdx-json      -> spdx-json
+        format: ${{ inputs.sbom-format == 'spdx-json' && 'spdx-json' || 'cyclonedx' }}
+        output: ${{ inputs.sbom-output }}
+      env:
+        TRIVY_DISABLE_VEX_NOTICE: 'true'
+
+    # Optional: SBOM generation (2) – Outputs normalisieren
+    - name: Normalize SBOM outputs
+      id: sbom-meta
+      if: ${{ inputs.sbom-enable == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        OUT="${{ inputs.sbom-output }}"
+        [[ -s "$OUT" ]] || { echo "SBOM not found or empty: $OUT" >&2; exit 1; }
+        echo "path=${OUT}" >> "$GITHUB_OUTPUT"
+        case "${{ inputs.sbom-format }}" in
+          cyclonedx-json) echo "format=cyclonedx" >> "$GITHUB_OUTPUT" ;;
+          spdx-json)      echo "format=spdx"      >> "$GITHUB_OUTPUT" ;;
+          *) echo "Unsupported sbom-format: ${{ inputs.sbom-format }}" >&2; exit 1 ;;
+        esac
+        echo "SBOM generated: $OUT ($(wc -c < "$OUT") bytes)"
 
     # Compute a 'failed' boolean output by checking if the scan step failed
     - name: Export result
