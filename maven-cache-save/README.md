@@ -1,17 +1,17 @@
 
-# Maven Cache Restore (GCS)
+# Maven Cache Save (GCS)
 
 **Description:**  
-Restores the Maven local repository cache from Google Cloud Storage to speed up builds and reduce dependency download time.  
-This composite GitHub Action retrieves a Maven cache from a Google Cloud Storage (GCS) bucket and restores it to the local Maven repository directory (`~/.m2/repository` by default).
+Prunes SNAPSHOT artifacts from the local Maven repository and saves the cache to Google Cloud Storage.  
+This composite GitHub Action helps optimize Maven builds by removing unnecessary SNAPSHOT dependencies and uploading the cleaned repository to a remote GCS bucket for future reuse.
 
 ---
 
 ## 🚀 Features
 
-- Restores Maven dependencies from a remote GCS bucket.
-- Supports custom cache keys and path prefixes for flexible caching strategies.
-- Speeds up Maven builds by avoiding repeated downloads of dependencies.
+- Deletes all SNAPSHOT artifacts from the local Maven repository.
+- Saves the cleaned Maven cache to a specified GCS bucket and path prefix.
+- Supports custom cache keys and repository paths for flexible caching strategies.
 
 ---
 
@@ -19,33 +19,30 @@ This composite GitHub Action retrieves a Maven cache from a Google Cloud Storage
 
 | Name            | Description                                                                                     | Required | Default                                                                                                   |
 |-----------------|-------------------------------------------------------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------|
-| `cache-key`     | Primary cache key for the Maven repository (e.g., `maven-<os>-<repo>-<hash>`).                | No       | `maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}`                        |
-| `gcs-bucket`    | Name of the GCS bucket that stores the cache.                                                 | **Yes**  | —                                                                                                         |
-| `gcs-path-prefix`| Path prefix within the bucket (e.g., `maven/<repo>/releases`).                               | No       | `maven/${{ github.repository }}/releases`                                                                |
-| `path`          | Local path to the Maven repository.                                                           | No       | `~/.m2/repository`                                                                                       |
+| `cache-key`     | Cache key matching the restore step to ensure consistency.                                      | No       | `maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}`                        |
+| `gcs-bucket`    | Name of the GCS bucket to store the cache.                                                     | Yes      | —                                                                                                         |
+| `gcs-path-prefix`| Path prefix within the bucket where the cache will be saved.                                  | No       | `maven/${{ github.repository }}/releases`                                                                |
+| `path`          | Local path to the Maven repository to save.                                                    | No       | `~/.m2/repository`                                                                                       |
+| `prune-pattern` | Pattern used to delete SNAPSHOT directories.                                                   | No       | `*-SNAPSHOT*`                                                                                            |
 
 ---
 
 ## 📤 Outputs
 
-| Name                | Description                                                                 |
-|---------------------|-----------------------------------------------------------------------------|
-| `cache-primary-key` | The primary key used for the restored cache; useful for subsequent save step.|
+This action does not define explicit outputs.
 
 ---
 
 ## 📝 Usage Example
 
 ```yaml
-- name: Restore Maven cache from GCS
-  id: cache-restore
-  uses: ./.github/actions/maven-cache-restore
+- name: Save Maven cache to GCS (releases only)
+  uses: ./.github/actions/maven-cache-save
   with:
     gcs-bucket: unifits-euw-arc-cache-prd-build
     # Optional overrides:
     # cache-key: "maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}"
     # gcs-path-prefix: "maven/${{ github.repository }}/releases"
     # path: "~/.m2/repository"
-
-- name: Print restored cache key
-  run: echo "Cache key: ${{ steps.cache-restore.outputs.cache-primary-key }}"
+    # prune-pattern: "*-SNAPSHOT*"
+``

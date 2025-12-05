@@ -1,48 +1,51 @@
 
-# Maven Cache Save (GCS)
+# Maven Jib Build & Push
 
 **Description:**  
-Prunes SNAPSHOT artifacts from the local Maven repository and saves the cache to Google Cloud Storage.  
-This composite GitHub Action helps optimize Maven builds by removing unnecessary SNAPSHOT dependencies and uploading the cleaned repository to a remote GCS bucket for future reuse.
+Builds and pushes a container image using Maven and Jib, then outputs the image digest.  
+This composite GitHub Action streamlines Java containerization workflows by automating Maven builds with Jib, supporting custom profiles, goals, and additional Maven arguments.
 
 ---
 
 ## 🚀 Features
 
-- Deletes all SNAPSHOT artifacts from the local Maven repository.
-- Saves the cleaned Maven cache to a specified GCS bucket and path prefix.
-- Supports custom cache keys and repository paths for flexible caching strategies.
+- Runs Maven with a configurable profile and goals.
+- Pushes container images using Jib.
+- Captures and outputs the image digest (sha256).
+- Supports extra Maven arguments for advanced customization.
 
 ---
 
 ## 📥 Inputs
 
-| Name            | Description                                                                                     | Required | Default                                                                                                   |
-|-----------------|-------------------------------------------------------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------|
-| `cache-key`     | Cache key matching the restore step to ensure consistency.                                      | No       | `maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}`                        |
-| `gcs-bucket`    | Name of the GCS bucket to store the cache.                                                     | Yes      | —                                                                                                         |
-| `gcs-path-prefix`| Path prefix within the bucket where the cache will be saved.                                  | No       | `maven/${{ github.repository }}/releases`                                                                |
-| `path`          | Local path to the Maven repository to save.                                                    | No       | `~/.m2/repository`                                                                                       |
-| `prune-pattern` | Pattern used to delete SNAPSHOT directories.                                                   | No       | `*-SNAPSHOT*`                                                                                            |
+| Name               | Description                                                                 | Required | Default             |
+|--------------------|-----------------------------------------------------------------------------|----------|---------------------|
+| `maven-profile`    | Maven profile to use for dockerization.                                     | No       | `dockerize`         |
+| `digest-output-file`| Filename used by Jib to write the built image digest.                      | No       | `digest.txt`        |
+| `maven-goals`      | Maven goals to execute (space-separated).                                   | No       | `deploy`            |
+| `batch-mode`       | Use Maven batch mode (`true`/`false`).                                      | No       | `true`              |
+| `update-snapshots` | Pass `--update-snapshots` flag (`true`/`false`).                           | No       | `true`              |
+| `extra-args`       | Optional additional Maven arguments appended to the command (e.g., `-DskipTests -Drevision=1.2.3`). | No | `""`                |
 
 ---
 
 ## 📤 Outputs
 
-This action does not define explicit outputs.
+| Name    | Description                                  |
+|---------|----------------------------------------------|
+| `digest`| Image digest (sha256:…) produced by Jib.     |
 
 ---
 
 ## 📝 Usage Example
 
 ```yaml
-- name: Save Maven cache to GCS (releases only)
-  uses: ./.github/actions/maven-cache-save
+- name: Maven Jib Build & Push
+  uses: ./.github/actions/maven-jib-build
   with:
-    gcs-bucket: unifits-euw-arc-cache-prd-build
-    # Optional overrides:
-    # cache-key: "maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}"
-    # gcs-path-prefix: "maven/${{ github.repository }}/releases"
-    # path: "~/.m2/repository"
-    # prune-pattern: "*-SNAPSHOT*"
-``
+    maven-profile: dockerize
+    digest-output-file: digest.txt
+    maven-goals: deploy
+    batch-mode: true
+    update-snapshots: true
+    extra-args: "-DskipTests -Drevision=${{ github.sha }}"

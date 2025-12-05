@@ -1,51 +1,51 @@
 
-# Maven Jib Build & Push
+# Maven Cache Restore (GCS)
 
 **Description:**  
-Builds and pushes a container image using Maven and Jib, then outputs the image digest.  
-This composite GitHub Action streamlines Java containerization workflows by automating Maven builds with Jib, supporting custom profiles, goals, and additional Maven arguments.
+Restores the Maven local repository cache from Google Cloud Storage to speed up builds and reduce dependency download time.  
+This composite GitHub Action retrieves a Maven cache from a Google Cloud Storage (GCS) bucket and restores it to the local Maven repository directory (`~/.m2/repository` by default).
 
 ---
 
 ## 🚀 Features
 
-- Runs Maven with a configurable profile and goals.
-- Pushes container images using Jib.
-- Captures and outputs the image digest (sha256).
-- Supports extra Maven arguments for advanced customization.
+- Restores Maven dependencies from a remote GCS bucket.
+- Supports custom cache keys and path prefixes for flexible caching strategies.
+- Speeds up Maven builds by avoiding repeated downloads of dependencies.
 
 ---
 
 ## 📥 Inputs
 
-| Name               | Description                                                                 | Required | Default             |
-|--------------------|-----------------------------------------------------------------------------|----------|---------------------|
-| `maven-profile`    | Maven profile to use for dockerization.                                     | No       | `dockerize`         |
-| `digest-output-file`| Filename used by Jib to write the built image digest.                      | No       | `digest.txt`        |
-| `maven-goals`      | Maven goals to execute (space-separated).                                   | No       | `deploy`            |
-| `batch-mode`       | Use Maven batch mode (`true`/`false`).                                      | No       | `true`              |
-| `update-snapshots` | Pass `--update-snapshots` flag (`true`/`false`).                           | No       | `true`              |
-| `extra-args`       | Optional additional Maven arguments appended to the command (e.g., `-DskipTests -Drevision=1.2.3`). | No | `""`                |
+| Name            | Description                                                                                     | Required | Default                                                                                                   |
+|-----------------|-------------------------------------------------------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------|
+| `cache-key`     | Primary cache key for the Maven repository (e.g., `maven-<os>-<repo>-<hash>`).                | No       | `maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}`                        |
+| `gcs-bucket`    | Name of the GCS bucket that stores the cache.                                                 | **Yes**  | —                                                                                                         |
+| `gcs-path-prefix`| Path prefix within the bucket (e.g., `maven/<repo>/releases`).                               | No       | `maven/${{ github.repository }}/releases`                                                                |
+| `path`          | Local path to the Maven repository.                                                           | No       | `~/.m2/repository`                                                                                       |
 
 ---
 
 ## 📤 Outputs
 
-| Name    | Description                                  |
-|---------|----------------------------------------------|
-| `digest`| Image digest (sha256:…) produced by Jib.     |
+| Name                | Description                                                                 |
+|---------------------|-----------------------------------------------------------------------------|
+| `cache-primary-key` | The primary key used for the restored cache; useful for subsequent save step.|
 
 ---
 
 ## 📝 Usage Example
 
 ```yaml
-- name: Maven Jib Build & Push
-  uses: ./.github/actions/maven-jib-build
+- name: Restore Maven cache from GCS
+  id: cache-restore
+  uses: ./.github/actions/maven-cache-restore
   with:
-    maven-profile: dockerize
-    digest-output-file: digest.txt
-    maven-goals: deploy
-    batch-mode: true
-    update-snapshots: true
-    extra-args: "-DskipTests -Drevision=${{ github.sha }}"
+    gcs-bucket: unifits-euw-arc-cache-prd-build
+    # Optional overrides:
+    # cache-key: "maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}"
+    # gcs-path-prefix: "maven/${{ github.repository }}/releases"
+    # path: "~/.m2/repository"
+
+- name: Print restored cache key
+  run: echo "Cache key: ${{ steps.cache-restore.outputs.cache-primary-key }}"

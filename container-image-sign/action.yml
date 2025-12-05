@@ -1,67 +1,209 @@
+
 # Unifits/unifits-github-actions/container-image-sign
+# Signs a container image (prefer repo@digest) with Cosign (keyless OIDC)
+# and optionally attests an SBOM (CycloneDX/SPDX) and a CVE report (e.g., Trivy JSON).
+
 name: "Container Image Sign"
-description: "Sign an image and create attestations (Provenance + CVE Report)"
+description: "Cosign keyless sign to GAR + optional SBOM/CVE attestations."
+branding:
+  color: "purple"
+  icon: "shield"
+
 inputs:
   image:
-    description: "Image reference with digest"
+    description: "Image reference (use repo@digest)."
     required: true
+
+  # ---- Cosign/registry options ----
+  recursive-sign:
+    description: "If 'true', add --recursive to sign multi-arch index & images."
+    required: false
+    default: "false"
+  tlog-upload:
+    description: "Upload signatures/attestations to Rekor transparency log."
+    required: false
+    default: "false"
+  rekor-url:
+    description: "Optional Rekor URL for private instances."
+    required: false
+    default: ""
+
+  # ---- Optional extra annotations on signature (key=value lines) ----
+  extra-annotations:
+    description: "Additional --annotation entries (newline-separated 'key=value')."
+    required: false
+    default: ""
+
+  # ---- CVE report (e.g., Trivy JSON) ----
   cve-report:
-    description: "Path to CVE report JSON file"
-    required: true
+    description: "Optional vulnerability report file (e.g., Trivy JSON)."
+    required: false
+    default: ""
+  cve-media-type:
+    description: "OCI media type for CVE report predicate."
+    required: false
+    default: "application/json"
+  attest-cve-report:
+    description: "If 'true', create a cosign attestation for the CVE report."
+    required: false
+    default: "true"
+
+  # ---- SBOM (CycloneDX/SPDX) ----
+  sbom-path:
+    description: "Optional SBOM file to attest (CycloneDX XML/JSON or SPDX)."
+    required: false
+    default: ""
+  sbom-format:
+    description: "SBOM format (cyclonedx|spdx)."
+    required: false
+    default: "cyclonedx"
+  sbom-media-type:
+    description: "Override OCI media type; if empty inferred from format & extension."
+    required: false
+    default: ""
+
+  # ---- Advanced: SLSA provenance using SBOM as predicate (optional) ----
+  attest-as-provenance:
+    description: "If 'true', emit DSSE provenance attestation using the SBOM as predicate."
+    required: false
+    default: "false"
+
+outputs:
+  signed-ref:
+    description: "Signed image reference (repo@digest)."
+    value: ${{ steps.cosign-sign.outputs.signed_ref }}
+  cve-attested:
+    description: "Whether a CVE attestation was created."
+    value: ${{ steps.cve-attest.outputs.attested }}
+  sbom-attested:
+    description: "Whether an SBOM attestation was created."
+    value: ${{ steps.sbom-attest.outputs.attested }}
+
 runs:
   using: "composite"
   steps:
-    # ----------------- Image Signierung  ---------------------------------------------
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v3.10.0
+      uses: sigstore/cosign-installer@v3
 
-    - name: Cosign Sign (keyless by digest)
-      shell: bash
-      env:
-        COSIGN_EXPERIMENTAL: "true"
-      run: |
-        cosign sign --yes ${{ inputs.image }}
-
-    # Eigene Build-Provenance-Attestation
-    - name: Generate Provenance Predicate
+    - name: Cosign sign (keyless OIDC)
+      id: cosign-sign
       shell: bash
       run: |
-        cat > provenance.json <<'JSON'
-        {
-          "_type": "https://slsa.dev/provenance/v1",
-          "buildType": "https://github.com/actions/build",
-          "builder": { "id": "https://github.com/actions" },
-          "buildConfig": {
-            "workflow": "${{ github.workflow }}",
-            "runId": "${{ github.run_id }}",
-            "repo": "${{ github.repository }}",
-            "ref": "${{ github.ref }}",
-            "sha": "${{ github.sha }}"
-          },
-          "materials": []
-        }
-        JSON
+        set -euo pipefail
+        IMG="${{ inputs.image }}"
+        [[ -z "$IMG" ]] && { echo "Input 'image' must not be empty"; exit 1; }
 
-    - name: Cosign Attest (store in GAR)
-      env:
-        COSIGN_EXPERIMENTAL: "true"
+        # Build common flags
+        FLAGS=()
+        # Rekor / transparency
+        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
+          FLAGS+=( "--tlog-upload=false" )
+        fi
+        if [[ -n "${{ inputs.rekor-url }}" ]]; then
+          FLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
+        fi
+        # Helpful annotations for audit/policy
+        FLAGS+=( "--annotation=repo=${GITHUB_REPOSITORY}" )
+        FLAGS+=( "--annotation=ref=${GITHUB_REF}" )
+        FLAGS+=( "--annotation=sha=${GITHUB_SHA}" )
+        FLAGS+=( "--annotation=workflow=${GITHUB_WORKFLOW}" )
+        FLAGS+=( "--annotation=run-id=${GITHUB_RUN_ID}" )
+        # User-provided extra annotations (newline-separated key=value)
+        if [[ -n "${{ inputs.extra-annotations }}" ]]; then
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            FLAGS+=( "--annotation=${line}" )
+          done <<< "${{ inputs.extra-annotations }}"
+        fi
+
+        echo "Signing image: $IMG"
+        if [[ "${{ inputs.recursive-sign }}" == "true" ]]; then
+          cosign sign --yes --recursive "${FLAGS[@]}" "$IMG"
+        else
+          cosign sign --yes "${FLAGS[@]}" "$IMG"
+        fi
+        echo "signed_ref=$IMG" >> "$GITHUB_OUTPUT"
+
+    # ---------- CVE report attestation ----------
+    - name: Cosign attest CVE report (optional)
+      id: cve-attest
+      if: ${{ inputs.cve-report != '' && inputs.attest-cve-report == 'true' }}
       shell: bash
       run: |
-        cosign attest --yes \
-          --predicate provenance.json  \
-          --type slsaprovenance \
-          ${{ inputs.image }}
+        set -euo pipefail
+        IMG="${{ inputs.image }}"
+        CVE="${{ inputs.cve-report }}"
+        MT="${{ inputs.cve-media-type }}"
+        [[ ! -f "$CVE" ]] && { echo "CVE report file not found: $CVE"; exit 1; }
 
-    # CVE-Report als Attestation anhängen
-    - name: Cosign Attest CVE Report (store in GAR)
-      env:
-        COSIGN_EXPERIMENTAL: "true"
+        AFLAGS=()
+        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
+          AFLAGS+=( "--tlog-upload=false" )
+        fi
+        if [[ -n "${{ inputs.rekor-url }}" ]]; then
+          AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
+        fi
+
+        # Use 'vuln' type (Trivy-compatible)
+        echo "Attesting CVE report ($CVE, media-type: $MT) to $IMG"
+        cosign attest --yes --type "vuln" --predicate "$CVE" --predicate-media-type "$MT" "${AFLAGS[@]}" "$IMG"
+        echo "attested=true" >> "$GITHUB_OUTPUT"
+
+    # ---------- SBOM attestation ----------
+    - name: Cosign attest SBOM (optional)
+      id: sbom-attest
+      if: ${{ inputs.sbom-path != '' }}
       shell: bash
       run: |
-        cosign attest --yes \
-          --predicate "${{ inputs.cve-report }}" \
-          --type vuln \
-          ${{ inputs.image }}
-        
-        
-        
+        set -euo pipefail
+        IMG="${{ inputs.image }}"
+        SBOM="${{ inputs.sbom-path }}"
+        FMT="${{ inputs.sbom-format }}"
+        MT_OVERRIDE="${{ inputs.sbom-media-type }}"
+
+        [[ ! -f "$SBOM" ]] && { echo "SBOM file not found: $SBOM"; exit 1; }
+        case "$FMT" in cyclonedx|spdx) ;; *) echo "Unsupported sbom-format: $FMT"; exit 1;; esac
+
+        # Inference for media types
+        if [[ -z "$MT_OVERRIDE" ]]; then
+          if [[ "$FMT" == "cyclonedx" ]]; then
+            MT_XML="application/vnd.cyclonedx+xml"
+            MT_JSON="application/vnd.cyclonedx+json"
+          else
+            MT_XML="application/spdx+xml"
+            MT_JSON="application/spdx+json"
+          fi
+          case "$SBOM" in *.xml) MT="$MT_XML" ;; *.json) MT="$MT_JSON" ;; *) MT="$MT_JSON" ;; esac
+        else
+          MT="$MT_OVERRIDE"
+        fi
+
+        AFLAGS=()
+        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
+          AFLAGS+=( "--tlog-upload=false" )
+        fi
+        if [[ -n "${{ inputs.rekor-url }}" ]]; then
+          AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
+        fi
+
+        echo "Attesting SBOM (format: $FMT, media-type: $MT) to $IMG"
+        cosign attest --yes --type "$FMT" --predicate "$SBOM" --predicate-media-type "$MT" "${AFLAGS[@]}" "$IMG"
+        echo "attested=true" >> "$GITHUB_OUTPUT"
+
+    # ---------- Optional DSSE provenance using SBOM as predicate ----------
+    - name: DSSE provenance attestation (advanced, optional)
+      if: ${{ inputs.sbom-path != '' && inputs.attest-as-provenance == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        IMG="${{ inputs.image }}"
+        SBOM="${{ inputs.sbom-path }}"
+        AFLAGS=()
+        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
+          AFLAGS+=( "--tlog-upload=false" )
+        fi
+        if [[ -n "${{ inputs.rekor-url }}" ]]; then
+          AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
+        fi
+        echo "Emitting DSSE provenance attestation to $IMG"
+        cosign attest --yes --type "https://slsa.dev/provenance/v1" --predicate "$SBOM" "${AFLAGS[@]}" "$IMG"
