@@ -1,7 +1,7 @@
 
 # Unifits/unifits-github-actions/container-image-scan
 name: "Container Image Scan"
-description: "Generate Trivy HTML report and JSON CVE report for container image. Optionally fail the job on findings and generate an SBOM for attestation."
+description: "Generate Trivy HTML (optional) and machine-readable vulnerability report (optional). Optionally fail on findings and generate an SBOM for attestation."
 branding:
   color: "green"
   icon: "shield"
@@ -11,15 +11,23 @@ inputs:
     description: "Image reference with digest (e.g., registry/repo@sha256:...)"
     required: true
 
-  # ---- Reports (Vuln) ----
-  html-report:
-    description: "Path for HTML report output"
+  # ---- Human-readable Report (HTML) ----
+  html-enable:
+    description: "If 'true', generate the Trivy HTML report"
     required: false
-    default: "trivy-report.html"
-  json-report:
-    description: "Path for JSON report output (cosign-vuln format)"
+    default: "true"
+
+  # ---- Vulnerability report (optional & configurable) ----
+  vuln-enable:
+    description: "If 'true', generate a machine-readable vulnerability report"
     required: false
-    default: "trivy-report.json"
+    default: "true"
+  vuln-format:
+    description: "Trivy report format (e.g., cosign-vuln, json, sarif)"
+    required: false
+    default: "cosign-vuln"
+
+  # ---- Policy: Fail conditions ----
   fail-on:
     description: "Fail when vulnerabilities are found at/above 'fail-on-severity' (true/false)"
     required: false
@@ -42,10 +50,6 @@ inputs:
     description: "SBOM output format for Trivy (one of: cyclonedx-json, spdx-json)"
     required: false
     default: "cyclonedx-json"
-  sbom-output:
-    description: "SBOM output path (e.g., sbom.cdx.json or sbom.spdx.json)"
-    required: false
-    default: "sbom.cdx.json"
 
   # --- GCS Restore-only (fixer Key) ---
   gcs-bucket:
@@ -63,6 +67,12 @@ outputs:
   failed:
     description: "Boolean flag indicating if vulnerabilities at/above fail-on-severity were found."
     value: ${{ steps.result.outputs.failed }}
+  json-report-path:
+    description: "Path of the generated vulnerability report (if vuln-enable == true)."
+    value: ${{ steps.report-meta.outputs.json_path }}
+  html-report-path:
+    description: "Path of the generated Trivy HTML report (if html-enable == true)."
+    value: ${{ steps.report-meta.outputs.html_path }}
   sbom-path:
     description: "Path of the generated SBOM (if sbom-enable == true)"
     value: ${{ steps.sbom-meta.outputs.path }}
@@ -99,6 +109,7 @@ runs:
 
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
+      if: ${{ inputs.html-enable == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -107,13 +118,14 @@ runs:
 
     # Generate HTML Report using Trivy Action (human-readable)
     - name: Generate HTML Report using Trivy Action
+      if: ${{ inputs.html-enable == 'true' }}
       uses: aquasecurity/trivy-action@0.33.1
       with:
         cache: 'false'
         image-ref: ${{ inputs.image }}
         format: template
         template: "@html.tpl"
-        output: ${{ inputs.html-report }}
+        output: trivy-report.html
         ignore-unfixed: false
         vuln-type: os,library
         severity: CRITICAL,HIGH
@@ -121,22 +133,22 @@ runs:
 
     # Upload HTML Report as artifact
     - name: Upload HTML Report
+      if: ${{ inputs.html-enable == 'true' }}
       uses: actions/upload-artifact@v5
       with:
         name: trivy-html-report
-        path: ${{ inputs.html-report }}
+        path: trivy-report.html
 
-    # JSON CVE report (machine-readable). Exit code derived from fail-on.
-    - name: Trivy JSON report
+    # Vulnerability report (machine-readable). Exit code derived from fail-on.
+    - name: Vulnerability report (machine-readable)
       id: trivy-json
+      if: ${{ inputs.vuln-enable == 'true' }}
       uses: aquasecurity/trivy-action@0.33.1
       with:
         cache: 'false'
         image-ref: ${{ inputs.image }}
-        format: cosign-vuln
-        output: ${{ inputs.json-report }}
-        # If fail-on == 'true' => exit-code '1' (break the build on findings),
-        # else exit-code '0' (always continue).
+        format: ${{ inputs.vuln-format }}
+        output: trivy-report.json
         exit-code: ${{ inputs.fail-on == 'true' && '1' || '0' }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
         vuln-type: 'os,library'
@@ -144,6 +156,27 @@ runs:
         scanners: 'vuln'
       env:
         TRIVY_DISABLE_VEX_NOTICE: 'true'
+
+    # Normalize report outputs (JSON/HTML) for downstream actions
+    - name: Normalize report outputs
+      id: report-meta
+      shell: bash
+      run: |
+        set -euo pipefail
+        JR="trivy-report.json"
+        HR="trivy-report.html"
+        if [[ "${{ inputs.vuln-enable }}" == "true" && -s "$JR" ]]; then
+          echo "json_path=${JR}" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::Vuln report disabled or not found: $JR"
+          echo "json_path=${JR}" >> "$GITHUB_OUTPUT"
+        fi
+        if [[ "${{ inputs.html-enable }}" == "true" && -s "$HR" ]]; then
+          echo "html_path=${HR}" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::HTML report disabled or not found: $HR"
+          echo "html_path=${HR}" >> "$GITHUB_OUTPUT"
+        fi
 
     # Optional: SBOM generation (1) – erzeugen
     - name: Generate SBOM (optional)
@@ -156,7 +189,7 @@ runs:
         #   cyclonedx-json -> cyclonedx
         #   spdx-json      -> spdx-json
         format: ${{ inputs.sbom-format == 'spdx-json' && 'spdx-json' || 'cyclonedx' }}
-        output: ${{ inputs.sbom-output }}
+        output: ${{ inputs.sbom-format == 'spdx-json' && 'sbom.spdx.json' || 'sbom.cdx.json' }}
       env:
         TRIVY_DISABLE_VEX_NOTICE: 'true'
 
@@ -167,7 +200,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        OUT="${{ inputs.sbom-output }}"
+        OUT="${{ inputs.sbom-format == 'spdx-json' && 'sbom.spdx.json' || 'sbom.cdx.json' }}"
         [[ -s "$OUT" ]] || { echo "SBOM not found or empty: $OUT" >&2; exit 1; }
         echo "path=${OUT}" >> "$GITHUB_OUTPUT"
         case "${{ inputs.sbom-format }}" in
@@ -177,14 +210,12 @@ runs:
         esac
         echo "SBOM generated: $OUT ($(wc -c < "$OUT") bytes)"
 
-    # Compute a 'failed' boolean output by checking if the scan step failed
+    # Compute a 'failed' boolean output
     - name: Export result
       id: result
       shell: bash
       run: |
-        # steps.trivy-json.outcome is 'success' or 'failure'
-        OUTCOME="${{ steps.trivy-json.outcome }}"
-        if [ "$OUTCOME" = "failure" ]; then
+        if [ "${{ inputs.vuln-enable }}" = "true" ] && [ "${{ steps.trivy-json.outcome }}" = "failure" ]; then
           echo "failed=true" >> "$GITHUB_OUTPUT"
         else
           echo "failed=false" >> "$GITHUB_OUTPUT"
