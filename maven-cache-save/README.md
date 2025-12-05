@@ -1,10 +1,8 @@
 # Maven Cache Save (GCS) GitHub Action
 
-# Maven Cache Save (GCS)
+This GitHub Action prunes SNAPSHOT artifacts from the local Maven repository and saves the cache to Google Cloud Storage (GCS). It is designed to optimize Maven build caching in CI/CD pipelines by storing only release artifacts, reducing cache size and improving restore performance.
 
-**Description:**  
-Prunes SNAPSHOT artifacts from the local Maven repository and saves the cache to Google Cloud Storage.  
-This composite GitHub Action helps optimize Maven builds by removing unnecessary SNAPSHOT dependencies and uploading the cleaned repository to a remote GCS bucket for future reuse.
+## Features
 
 - **Prune SNAPSHOT Artifacts**: Removes SNAPSHOT dependencies from the local Maven repository before caching.
 - **Save to GCS**: Uploads the pruned Maven repository to a specified GCS bucket.
@@ -13,40 +11,36 @@ This composite GitHub Action helps optimize Maven builds by removing unnecessary
 
 ## Inputs
 
-- Deletes all SNAPSHOT artifacts from the local Maven repository.
-- Saves the cleaned Maven cache to a specified GCS bucket and path prefix.
-- Supports custom cache keys and repository paths for flexible caching strategies.
+| Name             | Description                                                                 | Required | Default                                               |
+|------------------|-----------------------------------------------------------------------------|----------|-------------------------------------------------------|
+| `cache-key`      | Cache key matching the restore step to ensure consistency                   | No       | `maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}` |
+| `gcs-bucket`     | Name of the GCS bucket to store the cache                                  | Yes      | -                                                     |
+| `gcs-path-prefix`| Path prefix within the bucket where the cache will be saved                | No       | `maven/${{ github.repository }}/releases`             |
+| `path`           | Local path to the Maven repository to save                                 | No       | `~/.m2/repository`                                    |
+| `prune-pattern`  | Pattern used to exclude jars                                               | No       | `*-SNAPSHOT*`                                         |
 
----
-
-## 📥 Inputs
-
-| Name            | Description                                                                                     | Required | Default                                                                                                   |
-|-----------------|-------------------------------------------------------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------|
-| `cache-key`     | Cache key matching the restore step to ensure consistency.                                      | No       | `maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}`                        |
-| `gcs-bucket`    | Name of the GCS bucket to store the cache.                                                     | Yes      | —                                                                                                         |
-| `gcs-path-prefix`| Path prefix within the bucket where the cache will be saved.                                  | No       | `maven/${{ github.repository }}/releases`                                                                |
-| `path`          | Local path to the Maven repository to save.                                                    | No       | `~/.m2/repository`                                                                                       |
-| `prune-pattern` | Pattern used to delete SNAPSHOT directories.                                                   | No       | `*-SNAPSHOT*`                                                                                            |
-
----
-
-## 📤 Outputs
-
-This action does not define explicit outputs.
-
----
-
-## 📝 Usage Example
+## Example Workflow
 
 ```yaml
-- name: Save Maven cache to GCS (releases only)
-  uses: ./.github/actions/maven-cache-save
-  with:
-    gcs-bucket: unifits-euw-arc-cache-prd-build
-    # Optional overrides:
-    # cache-key: "maven-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('**/pom.xml') }}"
-    # gcs-path-prefix: "maven/${{ github.repository }}/releases"
-    # path: "~/.m2/repository"
-    # prune-pattern: "*-SNAPSHOT*"
-``
+name: Save Maven Cache
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Save Maven cache to GCS
+        uses: Unifits/unifits-github-actions/maven-cache-save@v1
+        with:
+          gcs-bucket: 'my-maven-cache-bucket'
+```
+
+## Notes
+
+- Uses the `danySam/gcs-cache/save` action under the hood for GCS operations.
+- The prune pattern can be customized to exclude other types of artifacts if needed.
+- Works best when paired with a corresponding cache restore action at the start of your workflow.
