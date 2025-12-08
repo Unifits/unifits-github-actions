@@ -20,7 +20,7 @@ inputs:
     required: false
     default: "trivy-html-report"
   html-artifact-prefix:
-    description: "Optional prefix prepended to HTML artifact name (e.g., ${{ github.run_id }}-jdk17)"
+    description: "Optional prefix prepended to the HTML artifact name (e.g., RUN_ID-image)"
     required: false
     default: ""
 
@@ -62,7 +62,7 @@ inputs:
     required: false
     default: "sbom"
   sbom-artifact-prefix:
-    description: "Optional prefix prepended to SBOM artifact name (e.g., ${{ github.run_id }}-jdk17)"
+    description: "Optional prefix prepended to the SBOM artifact name (e.g., RUN_ID-image)"
     required: false
     default: ""
 
@@ -98,6 +98,7 @@ outputs:
 runs:
   using: "composite"
   steps:
+
     # Restore ONLY: fixer Key
     - name: Restore Trivy cache (fixed key)
       id: restore-cache
