@@ -1,5 +1,4 @@
 
-# Unifits/unifits-github-actions/container-image-scan
 name: "Container Image Scan"
 description: "Generate Trivy HTML (optional) and machine-readable vulnerability report (optional). Optionally fail on findings and generate an SBOM for attestation."
 branding:
@@ -16,6 +15,14 @@ inputs:
     description: "If 'true', generate the Trivy HTML report"
     required: false
     default: "true"
+  html-artifact-name:
+    description: "Artifact name for the HTML report (default: trivy-html-report)"
+    required: false
+    default: "trivy-html-report"
+  html-artifact-prefix:
+    description: "Optional prefix prepended to HTML artifact name (e.g., ${{ github.run_id }}-jdk17)"
+    required: false
+    default: ""
 
   # ---- Vulnerability report (optional & configurable) ----
   vuln-enable:
@@ -50,8 +57,16 @@ inputs:
     description: "SBOM output format for Trivy (one of: cyclonedx-json, spdx-json)"
     required: false
     default: "cyclonedx-json"
+  sbom-artifact-name:
+    description: "Artifact name for the SBOM (default: sbom)"
+    required: false
+    default: "sbom"
+  sbom-artifact-prefix:
+    description: "Optional prefix prepended to SBOM artifact name (e.g., ${{ github.run_id }}-jdk17)"
+    required: false
+    default: ""
 
-  # --- GCS Restore-only (fixer Key) ---
+  # --- GCS Restore-only (fixed key) ---
   gcs-bucket:
     description: "GCS Bucket für Trivy Cache"
     required: true
@@ -83,7 +98,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-
     # Restore ONLY: fixer Key
     - name: Restore Trivy cache (fixed key)
       id: restore-cache
@@ -137,13 +151,15 @@ runs:
         severity: CRITICAL,HIGH
         scanners: vuln
 
-    # Upload HTML Report as artifact
+    # Upload HTML Report as artifact (customizable name, overwrite to avoid 409)
     - name: Upload HTML Report
       if: ${{ inputs.html-enable == 'true' }}
       uses: actions/upload-artifact@v5
       with:
-        name: trivy-html-report
+        name: ${{ inputs.html-artifact-prefix != '' && format('{0}-{1}', inputs.html-artifact-prefix, inputs.html-artifact-name) || inputs.html-artifact-name }}
         path: trivy-report.html
+        overwrite: true
+        if-no-files-found: warn
 
     # Vulnerability report (machine-readable). Exit code derived from fail-on.
     - name: Vulnerability report (machine-readable)
@@ -217,6 +233,16 @@ runs:
           *) echo "Unsupported sbom-format: ${{ inputs.sbom-format }}" >&2; exit 1 ;;
         esac
         echo "SBOM generated: $OUT ($(wc -c < "$OUT") bytes)"
+
+    # Upload SBOM as artifact (customizable name, overwrite to avoid 409)
+    - name: Upload SBOM Artifact
+      if: ${{ inputs.sbom-enable == 'true' }}
+      uses: actions/upload-artifact@v5
+      with:
+        name: ${{ inputs.sbom-artifact-prefix != '' && format('{0}-{1}', inputs.sbom-artifact-prefix, inputs.sbom-artifact-name) || inputs.sbom-artifact-name }}
+        path: ${{ steps.sbom-meta.outputs.path }}
+        overwrite: true
+        if-no-files-found: error
 
     # Compute a 'failed' boolean output
     - name: Export result
