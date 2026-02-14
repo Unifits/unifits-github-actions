@@ -25,6 +25,7 @@ This GitHub Action signs container images using **Cosign** (keyless OIDC) and op
 | `sbom-path`         | Optional SBOM file to attest (CycloneDX XML/JSON or SPDX)                   | No       | (empty)         |
 | `sbom-format`       | SBOM format (`cyclonedx`, `spdx`)                                           | No       | `cyclonedx`     |
 | `sbom-media-type`   | Override OCI media type; if empty, inferred from format & extension         | No       | (empty)         |
+| `use-oci-referrers` | Use OCI 1.1 referrers instead of tags (recommended for GAR "Attachments")   | No       | `true`          |
 
 ## Outputs
 
@@ -65,4 +66,5 @@ jobs:
 - Uses [Cosign](https://github.com/sigstore/cosign) for signing and attestation.
 - Supports keyless signing via OIDC (no private key management).
 - Attestations can be used for supply chain security and compliance.
+- For Google Artifact Registry (GAR), set `use-oci-referrers: 'true'` to make signatures and SBOMs appear in the **Attachments** (Anhänge) tab instead of as separate image tags.
 - Ideal for Kubernetes/GKE and modern DevSecOps workflows.

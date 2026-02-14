@@ -58,6 +58,12 @@ inputs:
     required: false
     default: ""
 
+  # ---- OCI 1.1 Referrers ----
+  use-oci-referrers:
+    description: "If 'true', use OCI 1.1 referrers instead of tag-based metadata (recommended for GAR 'Attachments' tab)."
+    required: false
+    default: "true"
+
 outputs:
   signed-ref:
     description: "Signed image reference (repo@digest)."
@@ -83,6 +89,8 @@ runs:
     - name: Cosign sign (keyless OIDC)
       id: cosign-sign
       shell: bash
+      env:
+        COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -131,6 +139,8 @@ runs:
       id: cve-attest
       if: ${{ inputs.cve-report != '' && inputs.attest-cve-report == 'true' }}
       shell: bash
+      env:
+        COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -155,6 +165,8 @@ runs:
       id: sbom-attest
       if: ${{ inputs.sbom-path != '' }}
       shell: bash
+      env:
+        COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"

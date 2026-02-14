@@ -21,10 +21,14 @@ This GitHub Action scans container images using **Trivy**, generates vulnerabili
 | `vuln-format`      | Vulnerability report format (`cosign-vuln`, `json`, `sarif`)            | No       | `cosign-vuln`      |
 | `fail-on`          | Fail build on vulnerabilities above severity threshold (`true`/`false`) | No       | `true`             |
 | `fail-on-severity` | Severity threshold (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`)                | No       | `CRITICAL`         |
-| `ignore-unfixed`   | Ignore unfixed vulnerabilities (`true`/`false`)                          | No       | `true`             |
-| `sbom-enable`      | Generate SBOM (`true`/`false`)                                          | No       | `true`             |
-| `sbom-format`      | SBOM format (`cyclonedx-json`, `spdx-json`)                             | No       | `cyclonedx-json`   |
-| `gcs-bucket`       | GCS bucket for Trivy cache                                              | Yes      | -                  |
+| `ignore-unfixed`      | Ignore unfixed vulnerabilities (`true`/`false`)                          | No       | `true`             |
+| `sbom-enable`         | Generate SBOM (`true`/`false`)                                          | No       | `true`             |
+| `sbom-format`         | SBOM format (`cyclonedx-json`, `spdx-json`)                             | No       | `cyclonedx-json`   |
+| `html-artifact-name`  | Artifact name for the HTML report                                       | No       | `trivy-html-report`|
+| `html-artifact-prefix`| Optional prefix for the HTML artifact name                              | No       | (empty)            |
+| `sbom-artifact-name`  | Artifact name for the SBOM                                              | No       | `sbom`             |
+| `sbom-artifact-prefix`| Optional prefix for the SBOM artifact name                              | No       | (empty)            |
+| `gcs-bucket`          | GCS bucket for Trivy cache                                              | Yes      | -                  |
 | `gcs-path-prefix`  | Prefix in bucket (e.g., `trivy-cache`)                                  | No       | `trivy-cache`      |
 | `fixed-cache-key`  | Fixed restore key (e.g., `trivy-db-current` or `trivy-db-YYYY-MM-DD`)   | Yes      | -                  |
 

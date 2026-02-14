@@ -13,7 +13,7 @@ inputs:
   digest-output-file:
     description: "Filename used by Jib to write the built image digest."
     required: false
-    default: "digest.txt"
+    default: "${{ github.workspace }}/digest.txt"
   maven-goals:
     description: "Maven goals to execute (space-separated)."
     required: false

@@ -18,7 +18,7 @@ This composite GitHub Action streamlines Java containerization workflows by auto
 | Name                | Description                                                        | Required | Default         |
 |---------------------|--------------------------------------------------------------------|----------|-----------------|
 | `maven-profile`     | Maven profile to use for dockerization                            | No       | `dockerize`     |
-| `digest-output-file`| Filename used by Jib to write the built image digest              | No       | `digest.txt`    |
+| `digest-output-file`| Filename used by Jib to write the built image digest              | No       | `${{ github.workspace }}/digest.txt` |
 | `maven-goals`       | Maven goals to execute (space-separated)                          | No       | `deploy`        |
 | `batch-mode`        | Use Maven batch mode (`true`/`false`)                             | No       | `true`          |
 | `update-snapshots`  | Pass `--update-snapshots` flag (`true`/`false`)                  | No       | `true`          |
