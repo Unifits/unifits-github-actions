@@ -92,6 +92,7 @@ runs:
       env:
         COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
         COSIGN_EXPERIMENTAL: 1
+        COSIGN_TLOG_UPLOAD: ${{ inputs.tlog-upload }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -104,9 +105,6 @@ runs:
           FLAGS+=( "--registry-referrers-mode=oci-1-1" )
         fi
         # Rekor / transparency
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-          FLAGS+=( "--tlog-upload=false" )
-        fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
           FLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
@@ -147,6 +145,7 @@ runs:
       env:
         COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
         COSIGN_EXPERIMENTAL: 1
+        COSIGN_TLOG_UPLOAD: ${{ inputs.tlog-upload }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -156,9 +155,6 @@ runs:
         AFLAGS=()
         if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
           AFLAGS+=( "--registry-referrers-mode=oci-1-1" )
-        fi
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-        AFLAGS+=( "--tlog-upload=false" )
         fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
         AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
@@ -177,6 +173,7 @@ runs:
       env:
         COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
         COSIGN_EXPERIMENTAL: 1
+        COSIGN_TLOG_UPLOAD: ${{ inputs.tlog-upload }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -186,9 +183,6 @@ runs:
         AFLAGS=()
         if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
           AFLAGS+=( "--registry-referrers-mode=oci-1-1" )
-        fi
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-          AFLAGS+=( "--tlog-upload=false" )
         fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
           AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
