@@ -79,9 +79,9 @@ runs:
   using: "composite"
   steps:
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v3
+      uses: sigstore/cosign-installer@v4 
       with:
-        cosign-release: 'v2.6.1'
+        cosign-release: 'v3.0.2'
         install-dir: $HOME/.cosign
         use-sudo: false
 
@@ -98,6 +98,10 @@ runs:
 
         # Build common flags
         FLAGS=()
+        # OCI 1.1 Referrers mode
+        if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
+          FLAGS+=( "--registry-referrers-mode=oci-1-1" )
+        fi
         # Rekor / transparency
         if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
           FLAGS+=( "--tlog-upload=false" )
@@ -148,6 +152,9 @@ runs:
         [[ ! -f "$CVE" ]] && { echo "CVE report file not found: $CVE"; exit 1; }
         
         AFLAGS=()
+        if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
+          AFLAGS+=( "--registry-referrers-mode=oci-1-1" )
+        fi
         if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
         AFLAGS+=( "--tlog-upload=false" )
         fi
@@ -174,6 +181,9 @@ runs:
         FMT="${{ inputs.sbom-format }}"
                
         AFLAGS=()
+        if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
+          AFLAGS+=( "--registry-referrers-mode=oci-1-1" )
+        fi
         if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
           AFLAGS+=( "--tlog-upload=false" )
         fi

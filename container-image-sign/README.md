@@ -4,6 +4,7 @@ This GitHub Action signs container images using **Cosign** (keyless OIDC) and op
 
 ## Features
 
+- **Cosign v3 Ready**: Verwendet die neueste Cosign-Version mit nativer OCI 1.1 Referrers Unterstützung.
 - **Cosign Keyless Signing**: Signs container images using OIDC identity, no key management required.
 - **Multi-arch Support**: Optionally sign multi-architecture image indexes recursively.
 - **Transparency Log**: Upload signatures and attestations to Rekor transparency log (public or private).
