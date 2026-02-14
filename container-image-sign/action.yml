@@ -22,7 +22,7 @@ inputs:
   tlog-upload:
     description: "Upload signatures/attestations to Rekor transparency log."
     required: false
-    default: "false"
+    default: "true"
   rekor-url:
     description: "Optional Rekor URL for private instances."
     required: false
