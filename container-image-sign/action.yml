@@ -81,7 +81,7 @@ runs:
     - name: Install Cosign
       uses: sigstore/cosign-installer@v4.0.0
       with:
-        cosign-release: 'v3.0.3'
+        cosign-release: 'v3.0.4'
         install-dir: $HOME/.cosign
         use-sudo: false
 
@@ -100,10 +100,6 @@ runs:
 
         # Build common flags
         FLAGS=()
-        # OCI 1.1 Referrers mode
-        if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
-          FLAGS+=( "--registry-referrers-mode=oci-1-1" )
-        fi
         # Rekor / transparency
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
           FLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
@@ -153,9 +149,6 @@ runs:
         [[ ! -f "$CVE" ]] && { echo "CVE report file not found: $CVE"; exit 1; }
         
         AFLAGS=()
-        if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
-          AFLAGS+=( "--registry-referrers-mode=oci-1-1" )
-        fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
         AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
@@ -181,9 +174,6 @@ runs:
         FMT="${{ inputs.sbom-format }}"
                
         AFLAGS=()
-        if [[ "${{ inputs.use-oci-referrers }}" == "true" ]]; then
-          AFLAGS+=( "--registry-referrers-mode=oci-1-1" )
-        fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
           AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
