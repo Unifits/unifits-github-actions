@@ -22,7 +22,7 @@ inputs:
   tlog-upload:
     description: "Upload signatures/attestations to Rekor transparency log."
     required: false
-    default: "false"
+    default: "true"
   rekor-url:
     description: "Optional Rekor URL for private instances."
     required: false
@@ -58,6 +58,12 @@ inputs:
     required: false
     default: ""
 
+  # ---- OCI 1.1 Referrers ----
+  use-oci-referrers:
+    description: "If 'true', use OCI 1.1 referrers instead of tag-based metadata (recommended for GAR 'Attachments' tab)."
+    required: false
+    default: "true"
+
 outputs:
   signed-ref:
     description: "Signed image reference (repo@digest)."
@@ -73,9 +79,9 @@ runs:
   using: "composite"
   steps:
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v3
+      uses: sigstore/cosign-installer@v4.0.0
       with:
-        cosign-release: 'v2.6.1'
+        cosign-release: 'v3.0.4'
         install-dir: $HOME/.cosign
         use-sudo: false
 
@@ -83,6 +89,10 @@ runs:
     - name: Cosign sign (keyless OIDC)
       id: cosign-sign
       shell: bash
+      env:
+        COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
+        COSIGN_EXPERIMENTAL: 1
+        COSIGN_TLOG_UPLOAD: ${{ inputs.tlog-upload }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -91,9 +101,6 @@ runs:
         # Build common flags
         FLAGS=()
         # Rekor / transparency
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-          FLAGS+=( "--tlog-upload=false" )
-        fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
           FLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
@@ -131,6 +138,10 @@ runs:
       id: cve-attest
       if: ${{ inputs.cve-report != '' && inputs.attest-cve-report == 'true' }}
       shell: bash
+      env:
+        COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
+        COSIGN_EXPERIMENTAL: 1
+        COSIGN_TLOG_UPLOAD: ${{ inputs.tlog-upload }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -138,9 +149,6 @@ runs:
         [[ ! -f "$CVE" ]] && { echo "CVE report file not found: $CVE"; exit 1; }
         
         AFLAGS=()
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-        AFLAGS+=( "--tlog-upload=false" )
-        fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
         AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
@@ -155,6 +163,10 @@ runs:
       id: sbom-attest
       if: ${{ inputs.sbom-path != '' }}
       shell: bash
+      env:
+        COSIGN_OCI_11: ${{ inputs.use-oci-referrers }}
+        COSIGN_EXPERIMENTAL: 1
+        COSIGN_TLOG_UPLOAD: ${{ inputs.tlog-upload }}
       run: |
         set -euo pipefail
         IMG="${{ inputs.image }}"
@@ -162,9 +174,6 @@ runs:
         FMT="${{ inputs.sbom-format }}"
                
         AFLAGS=()
-        if [[ "${{ inputs.tlog-upload }}" == "false" ]]; then
-          AFLAGS+=( "--tlog-upload=false" )
-        fi
         if [[ -n "${{ inputs.rekor-url }}" ]]; then
           AFLAGS+=( "--rekor-url=${{ inputs.rekor-url }}" )
         fi
