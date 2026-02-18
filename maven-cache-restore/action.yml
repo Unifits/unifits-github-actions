@@ -31,7 +31,7 @@ runs:
   steps:
     - name: Restore Maven cache from GCS
       id: restore
-      uses: danySam/gcs-cache/restore@v1
+      uses: danySam/gcs-cache/restore@848b6287a9b0f9f7318bcb57b9f84a3e761acb29 # v1
       with:
         path: ${{ inputs.path }}
         key: ${{ inputs.cache-key }}
