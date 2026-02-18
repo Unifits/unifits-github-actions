@@ -102,7 +102,7 @@ runs:
     # Restore ONLY: fixer Key
     - name: Restore Trivy cache (fixed key)
       id: restore-cache
-      uses: danySam/gcs-cache/restore@v1
+      uses: danySam/gcs-cache/restore@848b6287a9b0f9f7318bcb57b9f84a3e761acb29 # v1
       with:
         path: '${{ github.workspace }}/.cache/trivy'
         key: ${{ inputs.fixed-cache-key }}
@@ -139,7 +139,7 @@ runs:
     # Generate HTML Report using Trivy Action (human-readable)
     - name: Generate HTML Report using Trivy Action
       if: ${{ inputs.html-enable == 'true' }}
-      uses: aquasecurity/trivy-action@0.33.1
+      uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
       with:
         cache: 'false'
         skip-setup-trivy: 'true'
@@ -155,7 +155,7 @@ runs:
     # Upload HTML Report as artifact (customizable name, overwrite to avoid 409)
     - name: Upload HTML Report
       if: ${{ inputs.html-enable == 'true' }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
       with:
         name: ${{ inputs.html-artifact-prefix != '' && format('{0}-{1}', inputs.html-artifact-prefix, inputs.html-artifact-name) || inputs.html-artifact-name }}
         path: trivy-report.html
@@ -166,7 +166,7 @@ runs:
     - name: Vulnerability report (machine-readable)
       id: trivy-json
       if: ${{ inputs.vuln-enable == 'true' }}
-      uses: aquasecurity/trivy-action@0.33.1
+      uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
       with:
         skip-setup-trivy: 'true'
         cache: 'false'
@@ -205,7 +205,7 @@ runs:
     # Optional: SBOM generation (1) – erzeugen
     - name: Generate SBOM (optional)
       if: ${{ inputs.sbom-enable == 'true' }}
-      uses: aquasecurity/trivy-action@0.33.1
+      uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
       with:
         skip-setup-trivy: 'true'
         cache: 'false'
@@ -238,7 +238,7 @@ runs:
     # Upload SBOM as artifact (customizable name, overwrite to avoid 409)
     - name: Upload SBOM Artifact
       if: ${{ inputs.sbom-enable == 'true' }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
       with:
         name: ${{ inputs.sbom-artifact-prefix != '' && format('{0}-{1}', inputs.sbom-artifact-prefix, inputs.sbom-artifact-name) || inputs.sbom-artifact-name }}
         path: ${{ steps.sbom-meta.outputs.path }}
@@ -258,7 +258,7 @@ runs:
 
     - name: Save Trivy cache to GCS (only on cache miss)
       if: steps.restore-mark.outputs.hit == 'false'
-      uses: danySam/gcs-cache/save@v1
+      uses: danySam/gcs-cache/save@848b6287a9b0f9f7318bcb57b9f84a3e761acb29 # v1
       with:
         path: '${{ github.workspace }}/.cache/trivy'
         key: ${{ inputs.fixed-cache-key }}
