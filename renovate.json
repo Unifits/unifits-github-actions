@@ -1,24 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    ":timezone(Europe/Berlin)",
-    ":semanticCommits",
-    "helpers:pinGitHubActionDigests"
-  ],
-  "stabilityDays": 3,
-  "minimumReleaseAge": "3 days",
-  "dependencyDashboard": true,
-  "reviewers": ["team:infra-core"],
-  "github-actions": {
-    "enabled": true
-  },
-  "packageRules": [
-    {
-      "description": "Automatisch Minor- und Patch-Updates für GitHub Actions mergen",
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": true,
-      "matchManagers": ["github-actions"]
-    }
-  ]
+  "extends": ["github>Unifits/org-renovate-config//presets/infra.json"]
 }
