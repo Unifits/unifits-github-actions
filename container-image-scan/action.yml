@@ -155,7 +155,7 @@ runs:
     # Upload HTML Report as artifact (customizable name, overwrite to avoid 409)
     - name: Upload HTML Report
       if: ${{ inputs.html-enable == 'true' }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: ${{ inputs.html-artifact-prefix != '' && format('{0}-{1}', inputs.html-artifact-prefix, inputs.html-artifact-name) || inputs.html-artifact-name }}
         path: trivy-report.html
@@ -238,7 +238,7 @@ runs:
     # Upload SBOM as artifact (customizable name, overwrite to avoid 409)
     - name: Upload SBOM Artifact
       if: ${{ inputs.sbom-enable == 'true' }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: ${{ inputs.sbom-artifact-prefix != '' && format('{0}-{1}', inputs.sbom-artifact-prefix, inputs.sbom-artifact-name) || inputs.sbom-artifact-name }}
         path: ${{ steps.sbom-meta.outputs.path }}
