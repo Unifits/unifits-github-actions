@@ -122,11 +122,26 @@ runs:
           echo "hit=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Install Trivy
-      uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
-      with:
-        cache: 'false'
-        version: v0.68.1
+    - name: Install Trivy (via apt)
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Remove existing trivy folder to avoid conflicts with binary
+        rm -rf "${{ github.workspace }}/trivy"
+        
+        # Install dependencies
+        sudo apt-get update && sudo apt-get install -y wget gnupg
+        
+        # Add Trivy GPG key and repository
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+        
+        # Update and install Trivy
+        sudo apt-get update
+        sudo apt-get install -y trivy
+        
+        # Verify version
+        trivy --version
 
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
@@ -153,6 +168,7 @@ runs:
       uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
       with:
         cache: 'false'
+        skip-setup-trivy: 'true'
         image-ref: ${{ inputs.image }}
         format: template
         template: "@html.tpl"
@@ -178,6 +194,7 @@ runs:
       if: ${{ inputs.vuln-enable == 'true' }}
       uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
       with:
+        skip-setup-trivy: 'true'
         cache: 'false'
         image-ref: ${{ inputs.image }}
         format: ${{ inputs.vuln-format }}
@@ -216,6 +233,7 @@ runs:
       if: ${{ inputs.sbom-enable == 'true' }}
       uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
       with:
+        skip-setup-trivy: 'true'
         cache: 'false'
         image-ref: ${{ inputs.image }}
         # Map Input -> Trivy:
