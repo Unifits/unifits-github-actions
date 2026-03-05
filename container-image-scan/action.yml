@@ -133,8 +133,18 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        curl --fail -sSL "https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl" -o html.tpl
-        test -s html.tpl && echo "Template downloaded: $(wc -c < html.tpl) bytes"
+        TEMPLATE_URL="https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl"
+        EXPECTED_HASH="d36b637cc77bc1a49b1f9a2358173756cd27a5d3385fab6365c0bab09abe5f0a"
+        if ! curl --fail -v -sSL "$TEMPLATE_URL" -o html.tpl; then
+          echo "::error::Failed to download Trivy HTML template from github.com"
+          exit 1
+        fi
+        echo "$EXPECTED_HASH  html.tpl" | sha256sum --check --status || {
+          echo "::error::Trivy HTML template hash mismatch! Expected: $EXPECTED_HASH"
+          sha256sum html.tpl
+          exit 1
+        }
+        test -s html.tpl && echo "Template downloaded and verified: $(wc -c < html.tpl) bytes"
 
     # Generate HTML Report using Trivy Action (human-readable)
     - name: Generate HTML Report using Trivy Action
@@ -264,3 +274,24 @@ runs:
         key: ${{ inputs.fixed-cache-key }}
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-path-prefix: ${{ inputs.gcs-path-prefix }}
+
+    # Debug: Collect info on failure
+    - name: Debug info on failure
+      if: failure()
+      shell: bash
+      run: |
+        echo "::group::Debug - Environment state"
+        echo "Working Directory: $(pwd)"
+        echo "Image: ${{ inputs.image }}"
+        echo "Trivy version:"
+        trivy --version || echo "trivy not found or failed"
+        echo "::endgroup::"
+
+        echo "::group::Debug - Directory Listing"
+        ls -laR
+        echo "::endgroup::"
+
+        echo "::group::Debug - Network connectivity check"
+        curl -Is https://github.com | head -n 1 || echo "github.com unreachable"
+        curl -Is https://ghcr.io | head -n 1 || echo "ghcr.io unreachable"
+        echo "::endgroup::"
