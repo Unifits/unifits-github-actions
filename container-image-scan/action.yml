@@ -123,38 +123,10 @@ runs:
         fi
 
     - name: Install Trivy
-      shell: bash
-      run: |
-        set -euo pipefail
-        # Remove existing trivy folder to avoid conflicts
-        rm -rf ./trivy
-
-        INSTALL_URL="https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh"
-        EXPECTED_HASH="e00df553be558995b994758bc8995956554a16937f456dc6615b0cc411bfec7a"
-
-        # Download install script
-        if ! curl -sfL "$INSTALL_URL" -o install.sh; then
-          echo "::error::Failed to download Trivy install script"
-          exit 1
-        fi
-
-        # Verify hash
-        echo "$EXPECTED_HASH  install.sh" | sha256sum --check --status || {
-          echo "::error::Trivy install script hash mismatch! Expected: $EXPECTED_HASH"
-          sha256sum install.sh
-          exit 1
-        }
-
-        # Install to a local directory instead of /usr/local/bin (which requires sudo)
-        mkdir -p "${{ github.workspace }}/bin"
-        sh install.sh -b "${{ github.workspace }}/bin" v0.68.1
-        echo "${{ github.workspace }}/bin" >> "$GITHUB_PATH"
-
-        # Cleanup script
-        rm install.sh
-
-        # Immediate verification
-        "${{ github.workspace }}/bin/trivy" --version
+      uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
+      with:
+        cache: 'false'
+        version: v0.68.1
 
     # Download Trivy HTML template
     - name: Download Trivy HTML Template
@@ -181,7 +153,6 @@ runs:
       uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
       with:
         cache: 'false'
-        skip-setup-trivy: 'true'
         image-ref: ${{ inputs.image }}
         format: template
         template: "@html.tpl"
@@ -207,7 +178,6 @@ runs:
       if: ${{ inputs.vuln-enable == 'true' }}
       uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
       with:
-        skip-setup-trivy: 'true'
         cache: 'false'
         image-ref: ${{ inputs.image }}
         format: ${{ inputs.vuln-format }}
@@ -246,7 +216,6 @@ runs:
       if: ${{ inputs.sbom-enable == 'true' }}
       uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
       with:
-        skip-setup-trivy: 'true'
         cache: 'false'
         image-ref: ${{ inputs.image }}
         # Map Input -> Trivy:
