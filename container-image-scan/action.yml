@@ -211,17 +211,20 @@ runs:
     - name: Normalize report outputs
       id: report-meta
       shell: bash
+      env:
+        VULN_ENABLE: ${{ inputs.vuln-enable }}
+        HTML_ENABLE: ${{ inputs.html-enable }}
       run: |
         set -euo pipefail
         JR="trivy-report.json"
         HR="trivy-report.html"
-        if [[ "${{ inputs.vuln-enable }}" == "true" && -s "$JR" ]]; then
+        if [[ "$VULN_ENABLE" == "true" && -s "$JR" ]]; then
           echo "json_path=${JR}" >> "$GITHUB_OUTPUT"
         else
           echo "::notice::Vuln report disabled or not found: $JR"
           echo "json_path=${JR}" >> "$GITHUB_OUTPUT"
         fi
-        if [[ "${{ inputs.html-enable }}" == "true" && -s "$HR" ]]; then
+        if [[ "$HTML_ENABLE" == "true" && -s "$HR" ]]; then
           echo "html_path=${HR}" >> "$GITHUB_OUTPUT"
         else
           echo "::notice::HTML report disabled or not found: $HR"
