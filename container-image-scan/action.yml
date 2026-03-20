@@ -165,7 +165,7 @@ runs:
     # Generate HTML Report using Trivy Action (human-readable)
     - name: Generate HTML Report using Trivy Action
       if: ${{ inputs.html-enable == 'true' }}
-      uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
       with:
         cache: 'false'
         skip-setup-trivy: 'true'
@@ -192,7 +192,7 @@ runs:
     - name: Vulnerability report (machine-readable)
       id: trivy-json
       if: ${{ inputs.vuln-enable == 'true' }}
-      uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
       with:
         skip-setup-trivy: 'true'
         cache: 'false'
@@ -231,7 +231,7 @@ runs:
     # Optional: SBOM generation (1) – erzeugen
     - name: Generate SBOM (optional)
       if: ${{ inputs.sbom-enable == 'true' }}
-      uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
       with:
         skip-setup-trivy: 'true'
         cache: 'false'
